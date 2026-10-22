@@ -42,6 +42,8 @@ public class InstructionsPopup : MonoBehaviour
         openedBefore = true;
 
         if (panelRoot != null) panelRoot.SetActive(true);
+        var scrollRect = panelRoot != null ? panelRoot.GetComponentInChildren<UnityEngine.UI.ScrollRect>() : null;
+        if (scrollRect != null) scrollRect.verticalNormalizedPosition = 1f; // always open scrolled to the top
         Time.timeScale = 0f;
         GameManager.Instance?.SetInputLocked(true);
     }

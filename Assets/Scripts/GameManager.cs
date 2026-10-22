@@ -62,9 +62,10 @@ public class GameManager : MonoBehaviour
     public int settledPayments = 0; // Target is 3
     public int currentWave = 0;     // 0 = Free period, 1 = Wave 1, etc.
     public bool hasKey = false;     // key for the 2 locked Main Hall rooms, found in Main Gallery
+    int lockedDoorsRemaining = 2;   // drives the "Buka ruangan terkunci di Main Hall" objective
 
     [Header("Timer Settings")]
-    public float waveDuration = 300f;
+    public float waveDuration = 180f;
     float timeRemaining;
     bool isGameOver = false;
     bool hasWon = false;
@@ -149,41 +150,48 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    // Shared debt-resolution logic: coins >= debt -> auto-pay, settledPayments++, "PAID".
-    // coins < debt -> lose a life, "GAGAL BAYAR". Called both by EnemyAI on capture and
-    // available as a standalone check (kept from the original design).
-    public void OnEncounterUsher()
+    // Candleman only ever calls one of these two - it decides which before touching the
+    // player (see EnemyAI.CatchPlayer), since the two outcomes behave too differently
+    // (no teleport/flash vs. a choreographed attack+teleport) to share one method anymore.
+    // debt == 0 is not handled here at all: EnemyAI.CatchPlayer no-ops entirely in that case.
+
+    // Case: coins >= debt. Auto-pay, settle a payment, no teleport, no attack animation.
+    public void ResolvePaidCapture()
     {
-        if (debt == 0)
-        {
-            ShowNotification("Tidak ada tagihan saat ini.");
-            return;
-        }
+        if (isGameOver || hasWon) return;
 
-        if (coins >= debt)
-        {
-            coins -= debt;
-            debt = 0;
-            settledPayments++;
-            ShowNotification($"PAID! Settled {settledPayments}/3");
-            if (sfxAudioSource != null && paidSound != null) sfxAudioSource.PlayOneShot(paidSound);
-            Debug.Log($"Payment successful! Streak: {settledPayments}/3");
+        coins -= debt;
+        debt = 0;
+        settledPayments++;
+        ShowNotification($"PAID! Settled {settledPayments}/3");
+        if (sfxAudioSource != null && paidSound != null) sfxAudioSource.PlayOneShot(paidSound);
+        Debug.Log($"Payment successful! Streak: {settledPayments}/3");
 
-            if (settledPayments >= 3) OpenEscapeWay();
-        }
-        else
-        {
-            if (!DebugManager.Invincible) lives--;
-            ShowNotification("GAGAL BAYAR!");
-            Debug.Log($"Cannot pay! Lost 1 life. Lives left: {lives}");
-
-            if (!DebugManager.Invincible && lives <= 0)
-            {
-                TriggerGameOver("Tidak mampu membayar tagihan.");
-            }
-        }
-
+        if (settledPayments >= 3) OpenEscapeWay();
         UpdateUI();
+    }
+
+    // Case: coins < debt. Called by EnemyAI AFTER its "Bacok" attack animation finishes.
+    // Loses a life, wipes the current settled-payment streak, teleports the player back to
+    // spawn, and triggers LOSE if that was the last life.
+    public void ResolveFailedCapture(CharacterController playerController)
+    {
+        if (isGameOver || hasWon) return;
+
+        if (!DebugManager.Invincible) lives--;
+        settledPayments = 0;
+        ShowNotification("GAGAL BAYAR - Settled Payment hangus");
+        Debug.Log($"Cannot pay! Lost 1 life, settled payments reset. Lives left: {lives}");
+
+        if (captureFlashImage != null) StartCoroutine(FlashCapture());
+        if (sfxAudioSource != null && captureSound != null) sfxAudioSource.PlayOneShot(captureSound);
+        RespawnPlayerAtLobby(playerController);
+        UpdateUI();
+
+        if (!DebugManager.Invincible && lives <= 0)
+        {
+            TriggerGameOver("Tidak mampu membayar tagihan.");
+        }
     }
 
     void OpenEscapeWay()
@@ -225,9 +233,18 @@ public class GameManager : MonoBehaviour
         notificationText.gameObject.SetActive(false);
     }
 
-    public void SetInputLocked(bool locked)
+    // showCursor=false is for in-gameplay freezes (e.g. Candleman's attack animation) where
+    // player movement must stop but the mouse cursor should stay hidden/locked, unlike the
+    // pause/instructions menus which want the cursor free to click buttons.
+    public void SetInputLocked(bool locked, bool showCursor = true)
     {
         IsInputLocked = locked;
+        if (locked && !showCursor)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            return;
+        }
         Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = locked;
     }
@@ -237,6 +254,15 @@ public class GameManager : MonoBehaviour
         hasKey = true;
         if (keyText != null) keyText.text = "Kunci: Didapat";
         ShowNotification("Kamu mendapatkan kunci ruangan!");
+        UpdateUI();
+    }
+
+    // Called by DoorController once a locked Main Hall door is successfully unlocked with
+    // the key, so the HUD objective can clear once both rooms are open.
+    public void NotifyDoorUnlocked()
+    {
+        lockedDoorsRemaining = Mathf.Max(0, lockedDoorsRemaining - 1);
+        UpdateUI();
     }
 
     void UpdateUI()
@@ -244,7 +270,9 @@ public class GameManager : MonoBehaviour
         if (coinsText) coinsText.text = $"Coins: {coins}";
         if (debtText) debtText.text = $"Debt: {debt}";
 
-        if (waveText && currentWave == 0) waveText.text = "Free Exploration";
+        if (waveText && !hasKey) waveText.text = "Cari kunci di Main Gallery";
+        else if (waveText && lockedDoorsRemaining > 0) waveText.text = "Buka ruangan terkunci di Main Hall";
+        else if (waveText && currentWave == 0) waveText.text = "Free Exploration";
         else if (waveText && settledPayments < 3) waveText.text = $"Wave {currentWave}";
 
         if (livesText)
@@ -274,20 +302,6 @@ public class GameManager : MonoBehaviour
         SetInputLocked(true);
         Time.timeScale = 0f;
         if (endScreenUI != null) endScreenUI.ShowWin(coins, currentWave, settledPayments, lives);
-    }
-
-    // Called by EnemyAI when it catches the player: resolve the debt (pay or lose a life),
-    // then always teleport back to spawn regardless of outcome.
-    public void OnPlayerCaught(CharacterController playerController)
-    {
-        if (isGameOver || hasWon) return;
-
-        OnEncounterUsher();
-
-        if (captureFlashImage != null) StartCoroutine(FlashCapture());
-        if (sfxAudioSource != null && captureSound != null) sfxAudioSource.PlayOneShot(captureSound);
-
-        RespawnPlayerAtLobby(playerController);
     }
 
     void RespawnPlayerAtLobby(CharacterController playerController)
@@ -322,11 +336,11 @@ public class GameManager : MonoBehaviour
         settledPayments = 0;
         currentWave = 0;
         hasKey = false;
+        lockedDoorsRemaining = 2;
         timeRemaining = waveDuration;
         bellPlayedThisWave = false;
         isGameOver = false;
         hasWon = false;
         UpdateUI();
-        SetObjective("Free Exploration");
     }
 }

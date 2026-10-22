@@ -92,6 +92,7 @@ public class DoorController : MonoBehaviour, IInteractable
                 isLocked = false;
                 if (navMeshObstacle != null) navMeshObstacle.enabled = false;
                 GameManager.Instance.ShowNotification("Pintu terbuka.");
+                GameManager.Instance.NotifyDoorUnlocked();
                 // fall through and open it below
             }
             else

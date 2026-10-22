@@ -26,6 +26,7 @@ public class EnemyAI : MonoBehaviour
     [Header("Catch")]
     public float catchDistance = 1.2f;   // horizontal (XZ) fallback check - the trigger collider is the primary detector
     public float catchCooldown = 8f;
+    public float attackAnimDuration = 2.5f; // length of the "Bacok" (bacok.001) clip
 
     [Header("References")]
     public Transform player;      // auto-found (tag "Player", else GameObject named "hero") if left empty
@@ -191,7 +192,12 @@ public class EnemyAI : MonoBehaviour
     {
         agent.speed = patrolSpeed;
 
-        if (IsDangerous && (CanSeePlayer() || CanHearPlayer()))
+        // Hunting mode: the moment there's debt, Candleman beelines the player's live
+        // position from anywhere on the map - no line-of-sight or hearing-range check
+        // needed. (Previously this required CanSeePlayer()/CanHearPlayer(), which meant a
+        // player who wasn't sprinting and wasn't in the ~100 degree FOV cone was simply never
+        // detected, even with an active debt - that was the "Candleman doesn't chase" bug.)
+        if (IsDangerous)
         {
             EnterChase();
             return;
@@ -226,14 +232,12 @@ public class EnemyAI : MonoBehaviour
         if (dist <= catchDistance)
         {
             CatchPlayer();
-            return;
         }
 
-        if (!CanSeePlayer() && !CanHearPlayer())
-        {
-            lastKnownPlayerPos = player.position;
-            EnterSearch();
-        }
+        // No more dropping to Search while dangerous: hunting mode means Candleman keeps
+        // retargeting the player's live position every frame, relentlessly, for as long as
+        // debt > 0 (see UpdatePatrol). Search is still reachable if a future design wants a
+        // "lost the scent" moment, but nothing currently triggers it.
     }
 
     void UpdateSearch()
@@ -295,12 +299,58 @@ public class EnemyAI : MonoBehaviour
     void CatchPlayer()
     {
         if (state == State.Cooldown) return; // already caught this cycle - ignore repeat triggers
+        if (!IsDangerous) return; // debt == 0: touching Candleman has no effect whatsoever
 
-        PlayAnimTrigger(catchTrigger);
-        GameManager.Instance?.OnPlayerCaught(playerCC);
+        var gm = GameManager.Instance;
+        bool canPay = gm != null && gm.coins >= gm.debt;
+
         state = State.Cooldown;
         cooldownTimer = catchCooldown;
         agent.ResetPath();
+        agent.isStopped = true;
+
+        if (canPay)
+        {
+            // Paid on the spot: no attack animation, no teleport, Candleman just stands
+            // down and the cooldown timer (already started above) carries it back to patrol.
+            gm.ResolvePaidCapture();
+        }
+        else
+        {
+            StartCoroutine(FailedCaptureSequence(gm));
+        }
+    }
+
+    // coins < debt: freeze both player and Candleman, play the "Bacok" attack animation in
+    // full view of the camera, then resolve the consequences (life lost, streak wiped,
+    // teleport) only once the animation has actually finished.
+    System.Collections.IEnumerator FailedCaptureSequence(GameManager gm)
+    {
+        gm?.SetInputLocked(true, showCursor: false);
+
+        FacePlayerInstant();
+        if (animator != null) animator.speed = 1f; // guarantee full-speed playback regardless of the chase-scaled speed set before the freeze
+        PlayAnimTrigger(catchTrigger);
+
+        yield return new WaitForSeconds(attackAnimDuration);
+
+        gm?.ResolveFailedCapture(playerCC);
+
+        // Don't unlock input if that resolution just triggered LOSE - TriggerGameOver already
+        // re-locked it (with the cursor shown) for the end screen, and we'd otherwise stomp it.
+        if (gm != null && !gm.IsGameOver) gm.SetInputLocked(false);
+    }
+
+    // Snaps Candleman's yaw to face the player instantly, so the attack animation that's
+    // about to play is clearly facing the camera instead of whatever direction it was last
+    // moving in (UpdateFacing() stops updating once the agent is stationary).
+    void FacePlayerInstant()
+    {
+        if (player == null) return;
+        Vector3 toPlayer = player.position - transform.position;
+        toPlayer.y = 0f;
+        if (toPlayer.sqrMagnitude < 0.0001f) return;
+        transform.rotation = Quaternion.LookRotation(toPlayer.normalized, Vector3.up);
     }
 
     void PlayAnimTrigger(string trigger)
