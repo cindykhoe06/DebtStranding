@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
 {
@@ -38,7 +39,7 @@ public class GameManager : MonoBehaviour
     public TextMeshProUGUI paymentsText;
 
     [Header("UI - Key")]
-    public TextMeshProUGUI keyText;
+    public TextMeshProUGUI keyText; // Menampilkan nama kunci spesifik
 
     [Header("UI - Notifications")]
     public TextMeshProUGUI notificationText;
@@ -46,7 +47,7 @@ public class GameManager : MonoBehaviour
     Coroutine notificationRoutine;
 
     [Header("Navigation")]
-    public Unity.AI.Navigation.NavMeshSurface navMeshSurface; // rebaked at runtime when a locked door opens
+    public Unity.AI.Navigation.NavMeshSurface navMeshSurface;
 
     [Header("Blackout / Coins")]
     public BlackoutManager blackoutManager;
@@ -61,10 +62,13 @@ public class GameManager : MonoBehaviour
     public int lives = 3;
     public int settledPayments = 0; // Target is 3
     public int currentWave = 0;     // 0 = Free period, 1 = Wave 1, etc.
-    public bool hasKey = false;     // key for the 2 locked Main Hall rooms, found in Main Gallery
+    public bool hasKey = false;     // Tetap dipertahankan untuk kompatibilitas script teman
+
+    // Daftar nama kunci spesifik yang sudah dikoleksi
+    private List<string> collectedKeyNames = new List<string>();
 
     [Header("Timer Settings")]
-    public float waveDuration = 300f;
+    public float waveDuration = 300f; // 5 Menit
     float timeRemaining;
     bool isGameOver = false;
     bool hasWon = false;
@@ -117,10 +121,6 @@ public class GameManager : MonoBehaviour
         timerText.color = time <= timerWarningThreshold ? timerWarningColor : timerNormalColor;
     }
 
-    // Timer hits 0: wave advances, debt grows, lights go out briefly and every remaining
-    // coin relocates to a fresh random spot (BlackoutManager). Debt itself only causes a
-    // life loss through being CAUGHT (see ResolvePayment) - the timer no longer punishes
-    // directly, it just raises the stakes and shuffles the map.
     void OnWaveTimerEnd()
     {
         currentWave++;
@@ -149,9 +149,6 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    // Shared debt-resolution logic: coins >= debt -> auto-pay, settledPayments++, "PAID".
-    // coins < debt -> lose a life, "GAGAL BAYAR". Called both by EnemyAI on capture and
-    // available as a standalone check (kept from the original design).
     public void OnEncounterUsher()
     {
         if (debt == 0)
@@ -174,8 +171,9 @@ public class GameManager : MonoBehaviour
         else
         {
             if (!DebugManager.Invincible) lives--;
-            ShowNotification("GAGAL BAYAR!");
-            Debug.Log($"Cannot pay! Lost 1 life. Lives left: {lives}");
+            settledPayments = 0; // STREAK RESET KEMBALI KE 0 KARENA GAGAL BAYAR!
+            ShowNotification("GAGAL BAYAR! Streak Reset!");
+            Debug.Log($"Cannot pay! Lost 1 life. Streak reset to 0/3. Lives left: {lives}");
 
             if (!DebugManager.Invincible && lives <= 0)
             {
@@ -190,15 +188,10 @@ public class GameManager : MonoBehaviour
     {
         if (escapeWayRoot != null) escapeWayRoot.SetActive(true);
         if (escapeWayBarrier != null) escapeWayBarrier.SetActive(false);
-        // Note: deliberately NOT rebaking NavMesh here - Unity's runtime NavMesh builder
-        // needs "Read/Write Enabled" on every source mesh, which the imported museum meshes
-        // don't have (changing that project-wide is a heavy, unnecessary cost since Candleman
-        // isn't required to path into the Escape Way - the player reaches it via physics only).
         SetObjective("Jalan keluar terbuka!");
         ShowNotification("Semua tagihan lunas! Jalan keluar terbuka.");
     }
 
-    // Called by ExitTrigger when the player physically reaches the Escape Way exit point.
     public void OnReachExit()
     {
         if (isGameOver || hasWon) return;
@@ -232,11 +225,37 @@ public class GameManager : MonoBehaviour
         Cursor.visible = locked;
     }
 
-    public void GrantKey()
+    // --- FUNGSI KUNCI SPESIFIK & AMAN ---
+    // Dipanggil saat mengambil kunci dengan nama spesifik (contoh: "Office Key")
+    public void GrantKey(string keyDisplayName)
     {
         hasKey = true;
-        if (keyText != null) keyText.text = "Kunci: Didapat";
-        ShowNotification("Kamu mendapatkan kunci ruangan!");
+        if (!collectedKeyNames.Contains(keyDisplayName))
+        {
+            collectedKeyNames.Add(keyDisplayName);
+        }
+        UpdateKeyUI();
+        ShowNotification($"Kamu mendapatkan {keyDisplayName}!");
+    }
+
+    // Tetap disediakan tanpa parameter agar script lama/teman tidak error!
+    public void GrantKey()
+    {
+        GrantKey("Office Key");
+    }
+
+    void UpdateKeyUI()
+    {
+        if (keyText == null) return;
+
+        if (collectedKeyNames.Count == 0)
+        {
+            keyText.text = "Key: None"; // Bersih di awal game!
+        }
+        else
+        {
+            keyText.text = "Key: " + string.Join(", ", collectedKeyNames);
+        }
     }
 
     void UpdateUI()
@@ -255,7 +274,8 @@ public class GameManager : MonoBehaviour
         }
 
         if (paymentsText) paymentsText.text = $"Settled Payment: {settledPayments}/3";
-        if (keyText) keyText.text = hasKey ? "Kunci: Didapat" : "Kunci: Belum ada";
+
+        UpdateKeyUI();
     }
 
     void TriggerGameOver(string reason)
@@ -276,8 +296,6 @@ public class GameManager : MonoBehaviour
         if (endScreenUI != null) endScreenUI.ShowWin(coins, currentWave, settledPayments, lives);
     }
 
-    // Called by EnemyAI when it catches the player: resolve the debt (pay or lose a life),
-    // then always teleport back to spawn regardless of outcome.
     public void OnPlayerCaught(CharacterController playerController)
     {
         if (isGameOver || hasWon) return;
@@ -312,8 +330,6 @@ public class GameManager : MonoBehaviour
         captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
     }
 
-    // Full state reset used by Retry (EndScreenUI reloads the scene, so this mainly matters
-    // if GameManager ever survives a reload via DontDestroyOnLoad - kept for safety).
     public void ResetState()
     {
         coins = 0;
@@ -322,6 +338,7 @@ public class GameManager : MonoBehaviour
         settledPayments = 0;
         currentWave = 0;
         hasKey = false;
+        collectedKeyNames.Clear();
         timeRemaining = waveDuration;
         bellPlayedThisWave = false;
         isGameOver = false;

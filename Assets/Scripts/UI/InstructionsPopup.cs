@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 // Visitor Rules-styled instructions popup. Shows once automatically at game start, and can
 // be reopened any time via the HUD icon, Tab, or I. Pauses the game while open.
@@ -6,7 +7,36 @@ public class InstructionsPopup : MonoBehaviour
 {
     public static InstructionsPopup Instance;
 
+    [Header("UI References")]
     public GameObject panelRoot;
+    public TextMeshProUGUI instructionsText; // Slot untuk TextMeshPro teks rules
+
+    [Header("Rules Content (Auto-set to avoid Unity Editor inspector bugs)")]
+    [TextArea(10, 25)]
+    public string defaultRules = 
+@"MUSEUM VISITOR CODE
+
+1. GRATIS 5 MENIT PERTAMA
+Gunakan waktu untuk menjelajah & mengumpulkan koin.
+
+2. HUTANG & BUNGA 20%
+Tiap 5 menit, tagihan 20 Koin bertambah.
+Hutang belum lunas kena bunga 20% majemuk.
+
+3. PETUGAS PENAGIH (USHER)
+• Koin Cukup: Hutang lunas (Streak +1).
+• Koin Kurang: Hilang 1 Nyawa & streak kembali 0/3!
+
+4. CARA MENANG (ESCAPE)
+Lunasi hutang 3 KALI BERTURUT-TURUT untuk membuka pintu keluar.
+
+KONTROL:
+WASD    : Bergerak
+Shift   : Lari
+E       : Interaksi (Pintu / Laci / Kunci)
+Tab / I : Buka / Tutup Panduan ini
+ESC     : Pause Menu";
+
     bool openedBefore;
     bool wasPausedByPauseMenu; // avoid double-resuming if PauseMenu is also open
 
@@ -18,6 +48,12 @@ public class InstructionsPopup : MonoBehaviour
 
     void Start()
     {
+        // Pasang teks otomatis agar tidak perlu paste manual di TextMeshPro Inspector
+        if (instructionsText != null && !string.IsNullOrEmpty(defaultRules))
+        {
+            instructionsText.text = defaultRules;
+        }
+
         Show(auto: true);
     }
 
