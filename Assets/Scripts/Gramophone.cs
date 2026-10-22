@@ -15,6 +15,10 @@ public class Gramophone : MonoBehaviour
     private AudioSource audioSource;
     private bool isPlaying = false;
 
+    // Read-only flag for other systems (e.g. EnemyAI's Investigate state) to poll without
+    // changing anything about how the gramophone itself starts/stops.
+    public bool IsPlaying => isPlaying;
+
     void Awake()
     {
         audioSource = GetComponent<AudioSource>();

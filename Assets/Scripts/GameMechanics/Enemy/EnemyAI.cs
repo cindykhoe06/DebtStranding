@@ -5,7 +5,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyAI : MonoBehaviour
 {
-    public enum State { Patrol, Chase, Search, Cooldown }
+    public enum State { Patrol, Chase, Search, Cooldown, Investigate }
 
     [Header("Patrol")]
     public Transform[] patrolPoints;
@@ -26,7 +26,29 @@ public class EnemyAI : MonoBehaviour
     [Header("Catch")]
     public float catchDistance = 1.2f;   // horizontal (XZ) fallback check - the trigger collider is the primary detector
     public float catchCooldown = 8f;
-    public float attackAnimDuration = 2.5f; // length of the "Bacok" (bacok.001) clip
+    public float attackAnimDuration = 2.5f; // length of the "Attack" (bacok.001) clip
+
+    [Header("Investigate (lured by music)")]
+    // Office Room's Gramophone (Gramophone.cs, unchanged) exposes IsPlaying - while debt == 0,
+    // a playing gramophone pulls Candleman off its patrol route to go check the sound out.
+    public float investigateWaitDuration = 8f;
+    Gramophone[] gramophones;
+    float investigateTimer;
+
+    [Header("Crouch Through Low Doorways")]
+    // The baked NavMesh already has enough headroom for doorways (built with a 2m agent
+    // height), but the tall visual model would otherwise clip through door frames/lintels.
+    // A raycast straight up from the feet detects low ceilings and bends the model down to
+    // clear them, standing back up once past.
+    public float crouchCheckHeight = 4.2f;   // roughly up to EyePoint; a hit closer than this means duck
+    public float crouchLowerAmount = 0.9f;
+    public float crouchLerpSpeed = 4f;
+    public string crouchTrigger = "Nunduk";
+    LayerMask crouchCheckMask;
+    Transform modelTransform;
+    Vector3 modelBasePos;
+    bool isCrouching;
+    float crouchBlend;
 
     [Header("References")]
     public Transform player;      // auto-found (tag "Player", else GameObject named "hero") if left empty
@@ -40,10 +62,10 @@ public class EnemyAI : MonoBehaviour
     public float breathMaxDistance = 15f;
 
     [Header("Animation")]
-    public Animator animator;              // Candleman.controller: Trigger params Idle/Walk/Run/Nunduk/Bacok
+    public Animator animator;              // Candleman.controller: Trigger params Idle/Walk/Run/Nunduk/Attack
     public string walkTrigger = "Walk";
     public string runTrigger = "Run";
-    public string catchTrigger = "Bacok";
+    public string catchTrigger = "Attack";
 
     [Header("Rotation")]
     // NavMeshAgent.updateRotation is turned off on this agent (see scene setup) so turning
@@ -81,6 +103,13 @@ public class EnemyAI : MonoBehaviour
             if (go != null) player = go.transform;
         }
         if (player != null) playerCC = player.GetComponent<CharacterController>();
+
+        gramophones = FindObjectsByType<Gramophone>(FindObjectsInactive.Exclude);
+
+        modelTransform = transform.Find("Model");
+        if (modelTransform != null) modelBasePos = modelTransform.localPosition;
+
+        crouchCheckMask = ~0; // self-hits are filtered by transform hierarchy in UpdateCrouch, not by layer
     }
 
     void Start()
@@ -114,11 +143,13 @@ public class EnemyAI : MonoBehaviour
             case State.Chase: UpdateChase(); break;
             case State.Search: UpdateSearch(); break;
             case State.Cooldown: UpdateCooldown(); break;
+            case State.Investigate: UpdateInvestigate(); break;
         }
 
         UpdateFacing();
         UpdateAudio();
         UpdateAnimationSpeed();
+        UpdateCrouch();
     }
 
     void UpdateAnimationSpeed()
@@ -203,6 +234,13 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        var playing = FindPlayingGramophone();
+        if (playing != null)
+        {
+            EnterInvestigate(playing.transform.position);
+            return;
+        }
+
         if (patrolPoints == null || patrolPoints.Length == 0) return;
 
         if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
@@ -269,6 +307,34 @@ public class EnemyAI : MonoBehaviour
         if (cooldownTimer <= 0f) EnterPatrol();
     }
 
+    // Lured off patrol by a playing Gramophone: walk to it, wait investigateWaitDuration,
+    // then resume the patrol route. Debt turning on (hunting mode) always interrupts this.
+    void UpdateInvestigate()
+    {
+        if (IsDangerous) { EnterChase(); return; }
+
+        agent.speed = patrolSpeed;
+
+        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+        {
+            investigateTimer += Time.deltaTime;
+            if (investigateTimer >= investigateWaitDuration)
+            {
+                EnterPatrol();
+            }
+        }
+    }
+
+    Gramophone FindPlayingGramophone()
+    {
+        if (gramophones == null) return null;
+        foreach (var g in gramophones)
+        {
+            if (g != null && g.IsPlaying) return g;
+        }
+        return null;
+    }
+
     void EnterPatrol()
     {
         bool wasPatrol = state == State.Patrol;
@@ -295,6 +361,16 @@ public class EnemyAI : MonoBehaviour
         searchTimer = 0f;
         agent.SetDestination(lastKnownPlayerPos);
     }
+
+    void EnterInvestigate(Vector3 soundPos)
+    {
+        state = State.Investigate;
+        investigateTimer = 0f;
+        agent.SetDestination(soundPos);
+        PlayAnimTrigger(walkTrigger);
+    }
+
+    string CurrentMovementTrigger() => state == State.Chase ? runTrigger : walkTrigger;
 
     void CatchPlayer()
     {
@@ -329,6 +405,9 @@ public class EnemyAI : MonoBehaviour
         gm?.SetInputLocked(true, showCursor: false);
 
         FacePlayerInstant();
+        var lookTarget = eyePoint != null ? eyePoint.position : transform.position + Vector3.up * 3f;
+        playerCC?.GetComponent<PlayerController>()?.LookAtInstant(lookTarget);
+
         if (animator != null) animator.speed = 1f; // guarantee full-speed playback regardless of the chase-scaled speed set before the freeze
         PlayAnimTrigger(catchTrigger);
 
@@ -370,6 +449,43 @@ public class EnemyAI : MonoBehaviour
         if (player == null) return;
         if (other.transform != player && !other.transform.IsChildOf(player)) return;
         CatchPlayer();
+    }
+
+    // Raycasts straight up from the feet; if something is closer overhead than
+    // crouchCheckHeight (a door frame/lintel), plays the "Nunduk" duck animation and lowers
+    // the visual model a bit until clear of it, then stands back up.
+    //
+    // Uses RaycastAll + a hierarchy check (not a layer mask) to skip Candleman's own colliders:
+    // a layer-based exclusion would also exclude every other object sharing that layer (most of
+    // the museum geometry, including door lintels, all sit on the Default layer too).
+    static readonly RaycastHit[] crouchHitsBuffer = new RaycastHit[8];
+    void UpdateCrouch()
+    {
+        Vector3 origin = transform.position + Vector3.up * 0.2f;
+        bool lowCeiling = false;
+        int hitCount = Physics.RaycastNonAlloc(origin, Vector3.up, crouchHitsBuffer, crouchCheckHeight, crouchCheckMask, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < hitCount; i++)
+        {
+            var hitTransform = crouchHitsBuffer[i].transform;
+            if (hitTransform == transform || hitTransform.IsChildOf(transform)) continue;
+            lowCeiling = true;
+            break;
+        }
+
+        if (lowCeiling && !isCrouching)
+        {
+            isCrouching = true;
+            PlayAnimTrigger(crouchTrigger);
+        }
+        else if (!lowCeiling && isCrouching)
+        {
+            isCrouching = false;
+            PlayAnimTrigger(CurrentMovementTrigger());
+        }
+
+        crouchBlend = Mathf.MoveTowards(crouchBlend, isCrouching ? 1f : 0f, Time.deltaTime * crouchLerpSpeed);
+        if (modelTransform != null)
+            modelTransform.localPosition = modelBasePos - Vector3.up * (crouchLowerAmount * crouchBlend);
     }
 
     void UpdateAudio()

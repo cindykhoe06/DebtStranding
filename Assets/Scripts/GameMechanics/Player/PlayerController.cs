@@ -127,6 +127,26 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Snaps the player's body yaw and camera pitch to face a world point instantly - used by
+    // Candleman's attack sequence to force the camera onto it during the animation. Also
+    // updates the internal rotationX field (not just the camera's transform) so ordinary
+    // mouse look picks up smoothly from this orientation once input unlocks again, instead of
+    // snapping back to whatever rotationX was before.
+    public void LookAtInstant(Vector3 worldTarget)
+    {
+        Vector3 origin = playerCamera != null ? playerCamera.position : transform.position;
+        Vector3 toTarget = worldTarget - origin;
+        Vector3 flat = toTarget; flat.y = 0f;
+
+        if (flat.sqrMagnitude > 0.0001f)
+            transform.rotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
+
+        float flatDist = flat.magnitude;
+        float pitch = flatDist > 0.01f ? Mathf.Atan2(toTarget.y, flatDist) * Mathf.Rad2Deg : 0f;
+        rotationX = Mathf.Clamp(-pitch, -lookXLimit, lookXLimit);
+        if (playerCamera != null) playerCamera.localRotation = Quaternion.Euler(rotationX, 0, 0);
+    }
+
     // FUNGSI LOGIKA SUARA JALAN (DITARUH DI LUAR UPDATE)
     void HandleWalkingSound(bool isMoving, bool isSprinting)
     {
