@@ -18,26 +18,39 @@ public class PlayerController : MonoBehaviour
     public float bobSpeed = 10f;
     public float bobAmount = 0.05f;
 
+    [Header("Walking Sound (Looping Track)")]
+    public AudioSource footstepSource;
+    public AudioClip footstepLoopClip; // Masukkan audio walking effect kamu di sini
+
     [Header("Flashlight (Optional)")]
-    public Light flashlight; // Drag a spotlight here
+    public Light flashlight;
 
     private CharacterController controller;
     private Vector3 moveDirection = Vector3.zero;
     private float rotationX = 0;
     private float defaultCameraPosY = 0;
     private float bobTimer = 0;
+    private float stopDelayTimer = 0f;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
 
-        // Lock mouse to center of screen
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
         if (playerCamera != null)
         {
             defaultCameraPosY = playerCamera.localPosition.y;
+        }
+
+        // Setting AudioSource untuk looping
+        if (footstepSource != null && footstepLoopClip != null)
+        {
+            footstepSource.clip = footstepLoopClip;
+            footstepSource.loop = true;
+            footstepSource.playOnAwake = false;
+            footstepSource.Stop();
         }
     }
 
@@ -52,37 +65,41 @@ public class PlayerController : MonoBehaviour
             transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * mouseSensitivity, 0);
         }
 
-        // 2. WASD MOVEMENT + SPRINT (LEFT SHIFT)
-        bool isSprinting = Input.GetKey(KeyCode.LeftShift);
+        // 2. INPUT GERAKAN
+        float inputX = Input.GetAxisRaw("Horizontal"); // A / D
+        float inputY = Input.GetAxisRaw("Vertical");   // W / S
+
+        bool isMoving = (Mathf.Abs(inputX) > 0.1f || Mathf.Abs(inputY) > 0.1f);
+        bool isSprinting = isMoving && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
+
         float speed = isSprinting ? sprintSpeed : walkSpeed;
 
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
 
-        float curSpeedX = speed * Input.GetAxis("Vertical");
-        float curSpeedY = speed * Input.GetAxis("Horizontal");
+        moveDirection = (forward * inputY * speed) + (right * inputX * speed);
 
-        float movementDirectionY = moveDirection.y;
-        moveDirection = (forward * curSpeedX) + (right * curSpeedY);
-
-        // 3. GRAVITY
+        // 3. GRAVITASI
         if (controller.isGrounded)
         {
-            moveDirection.y = -2f; // Stick to the floor
+            moveDirection.y = -2f;
         }
         else
         {
-            moveDirection.y = movementDirectionY + (gravity * Time.deltaTime);
+            moveDirection.y += gravity * Time.deltaTime;
         }
 
         controller.Move(moveDirection * Time.deltaTime);
 
-        // 4. HEAD BOBBING
+        // 4. SISTEM SUARA JALAN (DIPANGGIL DI SINI)
+        HandleWalkingSound(isMoving, isSprinting);
+
+        // 5. HEAD BOBBING
         if (enableHeadBob && playerCamera != null)
         {
-            if (controller.isGrounded && (Mathf.Abs(curSpeedX) > 0.1f || Mathf.Abs(curSpeedY) > 0.1f))
+            if (controller.isGrounded && isMoving)
             {
-                bobTimer += Time.deltaTime * (isSprinting ? bobSpeed * 1.5f : bobSpeed);
+                bobTimer += Time.deltaTime * (isSprinting ? bobSpeed * 1.4f : bobSpeed);
                 playerCamera.localPosition = new Vector3(
                     playerCamera.localPosition.x,
                     defaultCameraPosY + Mathf.Sin(bobTimer) * bobAmount,
@@ -100,10 +117,45 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 5. FLASHLIGHT TOGGLE (PRESS 'F')
+        // 6. TOGGLE SENTER ('F')
         if (flashlight != null && Input.GetKeyDown(KeyCode.F))
         {
             flashlight.enabled = !flashlight.enabled;
+        }
+    }
+
+    // FUNGSI LOGIKA SUARA JALAN (DITARUH DI LUAR UPDATE)
+    void HandleWalkingSound(bool isMoving, bool isSprinting)
+    {
+        if (footstepSource == null || footstepLoopClip == null) return;
+
+        if (controller.isGrounded && isMoving)
+        {
+            // Beri waktu toleransi agar 1 hentakan langkah pertama tetap terdengar tuntas
+            stopDelayTimer = 0.35f;
+
+            footstepSource.pitch = isSprinting ? 1.35f : 1.0f;
+
+            if (!footstepSource.isPlaying)
+            {
+                footstepSource.time = 0.05f; 
+                footstepSource.Play();
+            }
+        }
+        else
+        {
+            // Saat berhenti, jangan diputus seketika agar langkah tidak terpotong kasar
+            if (stopDelayTimer > 0f)
+            {
+                stopDelayTimer -= Time.deltaTime;
+            }
+            else
+            {
+                if (footstepSource.isPlaying)
+                {
+                    footstepSource.Stop();
+                }
+            }
         }
     }
 }
