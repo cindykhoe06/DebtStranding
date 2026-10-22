@@ -1,0 +1,24 @@
+###TITLE
+VISITOR RULES
+###SUBTITLE
+Tujuan: Jelajahi museum, kumpulkan koin, dan lunasi 3 tagihan (Settled Payment 3/3) sebelum kehabisan nyawa.
+###RULE1
+1.<indent=8%>Setiap 3 menit, tagihan (Debt) bertambah, lampu museum padam sebentar, dan koin yang tersisa berpindah ke tempat acak.</indent>
+###RULE2
+2.<indent=8%>Candleman akan mengejarmu ke mana pun kamu pergi selama ada Debt (Debt > 0). Saat Debt = 0, ia hanya berpatroli dan tidak berbahaya.</indent>
+###RULE3
+3.<indent=8%>Tertangkap dan koin cukup? Tagihan otomatis dibayar (PAID) dan kamu tetap di tempat.</indent>
+###RULE4
+4.<indent=8%>Koin tidak cukup? Kamu kalah 1 Life, Settled Payment kembali ke 0, dan kamu dilempar ke titik awal.</indent>
+###RULE5
+5.<indent=8%>KUNCI: Kunci ruang terkunci di Main Hall tersembunyi di balik salah satu lukisan di Main Gallery. Arahkan pandangan ke lukisan, kalau muncul [E] tekan untuk memeriksanya. Lukisan yang tidak bisa di-interact berarti tidak menyimpan apa pun.</indent>
+###RULE6
+6.<indent=8%>Lunasi tagihan 3 kali (Settled Payment 3/3) untuk membuka Escape Way, lalu capai titik keluar untuk MENANG.</indent>
+###RULE7
+7.<indent=8%>Gramophone di Office Room bisa dinyalakan untuk mengalihkan perhatian Candleman - ia akan pergi memeriksa suaranya selama Debt = 0.</indent>
+###CONTROLS
+Kontrol:
+WASD Bergerak   Shift Lari   E Interaksi
+F Senter   Tab / I Instruksi ini   ESC Pause
+###CLOSING
+[Tutup / ESC]
