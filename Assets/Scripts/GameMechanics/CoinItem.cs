@@ -4,13 +4,14 @@ public class CoinItem : MonoBehaviour, IInteractable
 {
     public int coinValue = 5;
     public AudioClip pickupSound;
+    public float skipSilenceTime = 0.15f; // Ubah angka ini (misal 0.1 sampai 0.3 detik) untuk potong hening!
 
     [Header("Idle animation")]
     public float rotateSpeed = 90f;   // degrees/sec around Y
     public float bobAmount = 0.1f;
     public float bobSpeed = 2f;
 
-    bool collected;
+    private bool isCollected = false;
     Vector3 basePos;
     float bobTimer;
 
@@ -34,8 +35,8 @@ public class CoinItem : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (collected) return; // guards against a double Interact() call in the same frame
-        collected = true;
+        if (isCollected) return;
+        isCollected = true;
 
         if (GameManager.Instance != null)
         {
@@ -45,9 +46,22 @@ public class CoinItem : MonoBehaviour, IInteractable
 
         if (pickupSound != null)
         {
-            AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+            // Buat audio sementara yang langsung melompat ke detik suara cling
+            GameObject tempAudio = new GameObject("TempCoinAudio");
+            tempAudio.transform.position = Camera.main.transform.position;
+            AudioSource source = tempAudio.AddComponent<AudioSource>();
+            source.clip = pickupSound;
+            source.spatialBlend = 0f; // 2D jelas di telinga
+            source.time = skipSilenceTime; // LOMPAT MELEWATI DETIK KOSONG!
+            source.Play();
+
+            Destroy(tempAudio, pickupSound.length);
         }
 
-        Destroy(gameObject);
+        // Sembunyikan koin instan
+        GetComponent<Collider>().enabled = false;
+        foreach (Renderer r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+
+        Destroy(gameObject, 0.5f);
     }
 }

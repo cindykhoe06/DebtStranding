@@ -2,38 +2,65 @@ using UnityEngine;
 
 public class DoorController : MonoBehaviour, IInteractable
 {
-    [Header("Door Settings")]
-    public float openAngle = 90f;      // Try -90f if it swings the wrong way
+    [Header("Door Movement Settings")]
+    public float openAngle = 90f;        // Ubah ke -90f jika arah buka terbalik
     public float openSpeed = 3f;
     public bool isLocked = false;
 
-    [Header("Audio (Optional)")]
-    public AudioSource doorAudio;
+    [Header("Audio - Open Sound")]
     public AudioClip openSound;
+    public float openSkipSilence = 0.2f;
+
+    [Header("Audio - Close Sound")]
     public AudioClip closeSound;
+    public float closeSkipSilence = 0.1f;
+    public float closeSpeedPitch = 1.35f;
+
+    [Header("Audio Source")]
+    public AudioSource doorAudio;
 
     private bool isOpen = false;
-    private Quaternion closedRotation;
-    private Quaternion targetRotation;
+    private Vector3 lockedPosition;       // Posisi dikunci agar tidak bisa bergeser!
+    private float closedYAngle;
+    private float targetYAngle;
+    private float currentYAngle;
 
     public bool IsOpen => isOpen;
 
     void Start()
     {
-        closedRotation = transform.localRotation;
-        targetRotation = closedRotation;
+        // 1. Kunci posisi lokal agar pintu TIDAK BISA BERGESER masuk/keluar
+        lockedPosition = transform.localPosition;
+
+        // 2. Simpan sudut awal engsel
+        closedYAngle = transform.localEulerAngles.y;
+        currentYAngle = closedYAngle;
+        targetYAngle = closedYAngle;
+
+        if (doorAudio == null)
+        {
+            doorAudio = GetComponent<AudioSource>();
+        }
+
+        if (doorAudio != null)
+        {
+            doorAudio.playOnAwake = false;
+            doorAudio.spatialBlend = 1.0f; // 3D Audio
+            doorAudio.minDistance = 1.5f;
+            doorAudio.maxDistance = 12f;
+        }
     }
 
     void Update()
     {
-        // Smoothly swing toward the target rotation
-        transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRotation, Time.deltaTime * openSpeed);
-        
-        // NOTE: We do NOT check Input.GetKeyDown(KeyCode.E) here anymore!
-        // PlayerInteraction.cs handles the [E] press via Interact()!
+        // KUNCI POSISI: Pastikan posisi lokal tidak pernah bergeser 1 milimeter pun!
+        transform.localPosition = lockedPosition;
+
+        // ROTASI MURNI: Hanya memutar sudut Y engsel secara halus
+        currentYAngle = Mathf.LerpAngle(currentYAngle, targetYAngle, Time.deltaTime * openSpeed);
+        transform.localEulerAngles = new Vector3(transform.localEulerAngles.x, currentYAngle, transform.localEulerAngles.z);
     }
 
-    // Called automatically by PlayerInteraction.cs when pressing [E]
     public void Interact()
     {
         ToggleDoor();
@@ -57,13 +84,13 @@ public class DoorController : MonoBehaviour, IInteractable
 
         if (isOpen)
         {
-            targetRotation = closedRotation * Quaternion.Euler(0, openAngle, 0);
-            PlaySound(openSound);
+            targetYAngle = closedYAngle + openAngle;
+            PlayOpenAudio();
         }
         else
         {
-            targetRotation = closedRotation;
-            PlaySound(closeSound);
+            targetYAngle = closedYAngle;
+            PlayCloseAudio();
         }
     }
 
@@ -72,16 +99,32 @@ public class DoorController : MonoBehaviour, IInteractable
     {
         isLocked = false;
         isOpen = true;
-        targetRotation = closedRotation * Quaternion.Euler(0, openAngle, 0);
-        PlaySound(openSound);
+        targetYAngle = closedYAngle + openAngle;
+        PlayOpenAudio();
         isLocked = true; // locked AFTER opening so Interact() can no longer toggle it shut
     }
 
-    private void PlaySound(AudioClip clip)
+    void PlayOpenAudio()
     {
-        if (doorAudio != null && clip != null)
+        if (doorAudio != null && openSound != null)
         {
-            doorAudio.PlayOneShot(clip);
+            doorAudio.Stop();
+            doorAudio.clip = openSound;
+            doorAudio.pitch = 1.0f;
+            doorAudio.time = Mathf.Clamp(openSkipSilence, 0f, openSound.length - 0.1f);
+            doorAudio.Play();
+        }
+    }
+
+    void PlayCloseAudio()
+    {
+        if (doorAudio != null && closeSound != null)
+        {
+            doorAudio.Stop();
+            doorAudio.clip = closeSound;
+            doorAudio.pitch = closeSpeedPitch;
+            doorAudio.time = Mathf.Clamp(closeSkipSilence, 0f, closeSound.length - 0.1f);
+            doorAudio.Play();
         }
     }
 }

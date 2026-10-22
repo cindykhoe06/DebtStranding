@@ -33,6 +33,7 @@ public class PlayerInteraction : MonoBehaviour
         // Cast a ray forward from the center of the camera
         if (Physics.Raycast(ray, out hit, interactDistance))
         {
+            Debug.Log("Hit object: " + hit.collider.gameObject.name);
             // Look for any component that implements IInteractable
             IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
 

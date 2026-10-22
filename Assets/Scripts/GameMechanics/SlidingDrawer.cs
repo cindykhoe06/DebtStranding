@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class SlidingDrawer : MonoBehaviour, IInteractable
 {
-    [Header("Slide Direction & Distance")]
-    public Vector3 slideOffset = new Vector3(0, 0, 0.4f); // Distance it pulls out
+    [Header("Slide Settings")]
+    public Vector3 slideOffset = new Vector3(0, -0.0035f, 0); // Distance it slides out (adjust X/Y/Z)
     public float slideSpeed = 3f;
 
     [Header("Audio (Optional)")]
@@ -25,10 +25,11 @@ public class SlidingDrawer : MonoBehaviour, IInteractable
 
     void Update()
     {
-        // Smooth slide
+        // Smooth slide animation
         transform.localPosition = Vector3.Lerp(transform.localPosition, targetPos, Time.deltaTime * slideSpeed);
     }
 
+    // Called automatically by PlayerInteraction.cs when looking at drawer and pressing [E]
     public void Interact()
     {
         isOpen = !isOpen;
