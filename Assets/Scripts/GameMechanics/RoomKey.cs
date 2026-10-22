@@ -96,7 +96,7 @@ public class RoomKey : MonoBehaviour, IInteractable
         if (collected) return;
         collected = true;
 
-        GameManager.Instance?.GrantKey();
+        GameManager.Instance?.CollectExitKey();
         if (pickupSound != null)
         {
             // Not AudioSource.PlayClipAtPoint - its internal AudioSource can't be routed to a

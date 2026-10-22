@@ -249,7 +249,9 @@ public class GameManager : MonoBehaviour
         Cursor.visible = locked;
     }
 
-    public void GrantKey()
+    // Public entry point for picking up the exit/room key - called by RoomKey and by the
+    // painting-hidden-key mechanic (teammate's script) so both paths share one code path.
+    public void CollectExitKey()
     {
         hasKey = true;
         if (keyText != null) keyText.text = "Kunci: Ada";
@@ -270,7 +272,7 @@ public class GameManager : MonoBehaviour
         if (coinsText) coinsText.text = $"Coins: {coins}";
         if (debtText) debtText.text = $"Debt: {debt}";
 
-        if (waveText && !hasKey) waveText.text = "Cari kunci di Main Gallery";
+        if (waveText && !hasKey) waveText.text = "Periksa lukisan di Main Gallery untuk menemukan kunci";
         else if (waveText && lockedDoorsRemaining > 0) waveText.text = "Buka ruangan terkunci di Main Hall";
         else if (waveText && currentWave == 0) waveText.text = "Free Exploration";
         else if (waveText && settledPayments < 3) waveText.text = $"Wave {currentWave}";

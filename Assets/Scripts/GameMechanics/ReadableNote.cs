@@ -11,6 +11,8 @@ public class ReadableNote : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        NotePopup.Instance?.Show(noteText);
+        var textAsset = Resources.Load<TextAsset>("Text/clue_key");
+        string text = textAsset != null ? textAsset.text.TrimEnd('\n', '\r') : noteText;
+        NotePopup.Instance?.Show(text);
     }
 }
