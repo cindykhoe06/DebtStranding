@@ -52,7 +52,8 @@ public class GameManager : MonoBehaviour
     public BlackoutManager blackoutManager;
 
     [Header("Escape")]
-    public DoorController escapeDoor; // opened automatically once settledPayments reaches 3
+    public GameObject escapeWayRoot;    // "Escape Way (Hidden)" - revealed once settledPayments reaches 3
+    public GameObject escapeWayBarrier; // final wall blocking the way out - deactivated at the same time
 
     [Header("Game State")]
     public int coins = 0;
@@ -187,8 +188,12 @@ public class GameManager : MonoBehaviour
 
     void OpenEscapeWay()
     {
-        if (escapeDoor != null) escapeDoor.OpenPermanently();
-        if (navMeshSurface != null) navMeshSurface.BuildNavMesh();
+        if (escapeWayRoot != null) escapeWayRoot.SetActive(true);
+        if (escapeWayBarrier != null) escapeWayBarrier.SetActive(false);
+        // Note: deliberately NOT rebaking NavMesh here - Unity's runtime NavMesh builder
+        // needs "Read/Write Enabled" on every source mesh, which the imported museum meshes
+        // don't have (changing that project-wide is a heavy, unnecessary cost since Candleman
+        // isn't required to path into the Escape Way - the player reaches it via physics only).
         SetObjective("Jalan keluar terbuka!");
         ShowNotification("Semua tagihan lunas! Jalan keluar terbuka.");
     }
@@ -225,11 +230,6 @@ public class GameManager : MonoBehaviour
         IsInputLocked = locked;
         Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = locked;
-    }
-
-    public void RebakeNavMesh()
-    {
-        if (navMeshSurface != null) navMeshSurface.BuildNavMesh();
     }
 
     public void GrantKey()

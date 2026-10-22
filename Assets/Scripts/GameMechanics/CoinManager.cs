@@ -23,6 +23,11 @@ public class CoinManager : MonoBehaviour
         }
     }
 
+    void Start()
+    {
+        SpawnInitialCoins();
+    }
+
     public void SpawnInitialCoins()
     {
         SpawnBatch();
