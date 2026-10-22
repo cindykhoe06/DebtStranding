@@ -72,7 +72,10 @@ public class DoorController : MonoBehaviour, IInteractable
             if (KeyInventory.HasKey(requiredKeyID))
             {
                 isLocked = false; // Buka kunci permanen
+                GameManager.Instance?.ShowNotification("Pintu terbuka.");
+                GameManager.Instance?.NotifyDoorUnlocked();
                 Debug.Log("Door unlocked!");
+                // fall through and open it below
             }
             else
             {
