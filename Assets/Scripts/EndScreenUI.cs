@@ -22,13 +22,13 @@ public class EndScreenUI : MonoBehaviour
         if (losePanel != null) losePanel.SetActive(false);
     }
 
-    public void ShowWin(int coins, int payments)
+    public void ShowWin(int coins, int wave, int payments, int lives)
     {
         float elapsed = Time.timeSinceLevelLoad;
         int mins = Mathf.FloorToInt(elapsed / 60f);
         int secs = Mathf.FloorToInt(elapsed % 60f);
         if (winSummaryText != null)
-            winSummaryText.text = $"PAID IN FULL\n\nCoins tersisa: {coins}\nPembayaran lunas: {payments}/3\nWaktu: {mins:00}:{secs:00}";
+            winSummaryText.text = $"PAID IN FULL\n\nCoins tersisa: {coins}\nWave: {wave}\nPembayaran lunas: {payments}/3\nLives: {lives}\nWaktu: {mins:00}:{secs:00}";
         if (winPanel != null) winPanel.SetActive(true);
     }
 

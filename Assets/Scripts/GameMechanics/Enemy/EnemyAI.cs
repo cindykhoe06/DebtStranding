@@ -65,12 +65,9 @@ public class EnemyAI : MonoBehaviour
     float cooldownTimer;
     Vector3 lastKnownPlayerPos;
 
-    // Hunting mode: triggered externally (e.g. GameManager after a failed payment) - the
-    // Candleman immediately knows the player's position and moves faster for a set duration,
-    // ignoring the normal FOV/hearing checks until it expires.
-    bool hunting;
-    float huntTimer;
-    float huntSpeedMultiplier = 1f;
+    // Final design: the Candleman is only a threat while debt > 0. At debt == 0 it patrols
+    // but never engages, even if it sees/hears the player.
+    static bool IsDangerous => GameManager.Instance != null && GameManager.Instance.debt > 0;
 
     void Awake()
     {
@@ -110,12 +107,6 @@ public class EnemyAI : MonoBehaviour
         }
         agent.isStopped = false;
 
-        if (hunting)
-        {
-            huntTimer -= Time.deltaTime;
-            if (huntTimer <= 0f) hunting = false;
-        }
-
         switch (state)
         {
             case State.Patrol: UpdatePatrol(); break;
@@ -127,17 +118,6 @@ public class EnemyAI : MonoBehaviour
         UpdateFacing();
         UpdateAudio();
         UpdateAnimationSpeed();
-    }
-
-    // Called by GameManager when a payment is missed: the Candleman immediately knows
-    // the player's position and chases faster for `duration` seconds.
-    public void StartHunting(float duration, float speedMultiplier = 1.5f)
-    {
-        hunting = true;
-        huntTimer = duration;
-        huntSpeedMultiplier = speedMultiplier;
-        if (player != null) lastKnownPlayerPos = player.position;
-        EnterChase();
     }
 
     void UpdateAnimationSpeed()
@@ -211,7 +191,7 @@ public class EnemyAI : MonoBehaviour
     {
         agent.speed = patrolSpeed;
 
-        if (CanSeePlayer() || CanHearPlayer())
+        if (IsDangerous && (CanSeePlayer() || CanHearPlayer()))
         {
             EnterChase();
             return;
@@ -233,7 +213,10 @@ public class EnemyAI : MonoBehaviour
 
     void UpdateChase()
     {
-        agent.speed = hunting ? chaseSpeed * huntSpeedMultiplier : chaseSpeed;
+        // Debt got settled (e.g. caught mid-chase and auto-paid) - stand down immediately.
+        if (!IsDangerous) { EnterPatrol(); return; }
+
+        agent.speed = chaseSpeed;
         if (player == null) { EnterPatrol(); return; }
 
         agent.SetDestination(player.position);
@@ -246,8 +229,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        // While hunting, the Candleman always knows where the player is - it never loses track.
-        if (!hunting && !CanSeePlayer() && !CanHearPlayer())
+        if (!CanSeePlayer() && !CanHearPlayer())
         {
             lastKnownPlayerPos = player.position;
             EnterSearch();
@@ -256,6 +238,8 @@ public class EnemyAI : MonoBehaviour
 
     void UpdateSearch()
     {
+        if (!IsDangerous) { EnterPatrol(); return; }
+
         agent.speed = chaseSpeed;
 
         if (CanSeePlayer() || CanHearPlayer())

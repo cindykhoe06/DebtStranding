@@ -24,7 +24,6 @@ public class PlayerController : MonoBehaviour
 
     [Header("Flashlight (Optional)")]
     public Light flashlight; // Drag a spotlight here
-    public float flashlightDrainPerSecond = 2.5f; // 100% battery lasts 40s of continuous use
 
     private CharacterController controller;
     private Vector3 moveDirection = Vector3.zero;
@@ -121,28 +120,10 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 6. TOGGLE SENTER ('F') + battery drain
-        if (flashlight != null)
+        // 6. TOGGLE SENTER ('F')
+        if (flashlight != null && Input.GetKeyDown(KeyCode.F))
         {
-            if (Input.GetKeyDown(KeyCode.F))
-            {
-                bool turningOn = !flashlight.enabled;
-                if (turningOn && GameManager.Instance != null && GameManager.Instance.flashlightBattery <= 0f)
-                {
-                    GameManager.Instance.ShowNotification("Baterai senter habis!");
-                }
-                else
-                {
-                    flashlight.enabled = turningOn;
-                }
-            }
-
-            if (flashlight.enabled && GameManager.Instance != null)
-            {
-                float remaining = GameManager.Instance.flashlightBattery - flashlightDrainPerSecond * Time.deltaTime;
-                GameManager.Instance.SetBattery(remaining);
-                if (remaining <= 0f) flashlight.enabled = false;
-            }
+            flashlight.enabled = !flashlight.enabled;
         }
     }
 
