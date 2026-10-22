@@ -21,6 +21,12 @@ public class PlayerInteraction : MonoBehaviour
 
     void Update()
     {
+        if (GameManager.Instance != null && GameManager.Instance.IsInputLocked)
+        {
+            HidePrompt();
+            return;
+        }
+
         Ray ray = new Ray(playerCam.transform.position, playerCam.transform.forward);
         RaycastHit hit;
 

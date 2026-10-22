@@ -16,6 +16,8 @@ public class DoorController : MonoBehaviour, IInteractable
     private Quaternion closedRotation;
     private Quaternion targetRotation;
 
+    public bool IsOpen => isOpen;
+
     void Start()
     {
         closedRotation = transform.localRotation;
@@ -63,6 +65,16 @@ public class DoorController : MonoBehaviour, IInteractable
             targetRotation = closedRotation;
             PlaySound(closeSound);
         }
+    }
+
+    // Used by TaskManager: forces the door open and locks it so it can't be closed again.
+    public void OpenPermanently()
+    {
+        isLocked = false;
+        isOpen = true;
+        targetRotation = closedRotation * Quaternion.Euler(0, openAngle, 0);
+        PlaySound(openSound);
+        isLocked = true; // locked AFTER opening so Interact() can no longer toggle it shut
     }
 
     private void PlaySound(AudioClip clip)

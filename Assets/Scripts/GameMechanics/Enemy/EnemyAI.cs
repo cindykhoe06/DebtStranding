@@ -103,7 +103,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        if (GameManager.Instance != null && (GameManager.Instance.IsGameOver || GameManager.Instance.HasWon))
+        if (GameManager.Instance != null && (GameManager.Instance.IsGameOver || GameManager.Instance.HasWon || GameManager.Instance.IsInputLocked))
         {
             agent.isStopped = true;
             return;
