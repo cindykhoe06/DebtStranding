@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class DoorController : MonoBehaviour, IInteractable
 {
@@ -8,6 +9,12 @@ public class DoorController : MonoBehaviour, IInteractable
     public bool isLocked = false;
     public bool requiresKey = false;     // if true, Interact() while locked checks GameManager.hasKey
     public string lockedMessage = "[Locked]";
+
+    [Header("Navigation")]
+    // Carves the doorway out of the baked NavMesh while locked, so Candleman can't path into
+    // the room through a door the player hasn't unlocked yet. Disabled permanently the moment
+    // the door is unlocked, granting the monster access from then on (see Interact()/ToggleDoor()).
+    public NavMeshObstacle navMeshObstacle;
 
     [Header("Audio - Open Sound")]
     public AudioClip openSound;
@@ -51,6 +58,8 @@ public class DoorController : MonoBehaviour, IInteractable
             doorAudio.minDistance = 1.5f;
             doorAudio.maxDistance = 12f;
         }
+
+        if (navMeshObstacle != null) navMeshObstacle.enabled = isLocked;
     }
 
     void Update()
@@ -81,6 +90,7 @@ public class DoorController : MonoBehaviour, IInteractable
             if (requiresKey && GameManager.Instance != null && GameManager.Instance.hasKey)
             {
                 isLocked = false;
+                if (navMeshObstacle != null) navMeshObstacle.enabled = false;
                 GameManager.Instance.ShowNotification("Pintu terbuka.");
                 // fall through and open it below
             }
