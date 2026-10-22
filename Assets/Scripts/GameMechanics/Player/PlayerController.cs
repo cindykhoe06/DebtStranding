@@ -23,7 +23,7 @@ public class PlayerController : MonoBehaviour
     public AudioClip footstepLoopClip; // Masukkan audio walking effect kamu di sini
 
     [Header("Flashlight (Optional)")]
-    public Light flashlight;
+    public Light flashlight; // Drag a spotlight here
 
     private CharacterController controller;
     private Vector3 moveDirection = Vector3.zero;
@@ -56,13 +56,16 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // 1. MOUSE LOOK
+        if (GameManager.Instance != null && GameManager.Instance.IsInputLocked) return;
+
+        // 1. MOUSE LOOK (base sensitivity scaled live by the Settings menu's multiplier)
         if (playerCamera != null)
         {
-            rotationX += -Input.GetAxis("Mouse Y") * mouseSensitivity;
+            float sensitivity = mouseSensitivity * SettingsManager.MouseSensitivity;
+            rotationX += -Input.GetAxis("Mouse Y") * sensitivity;
             rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
             playerCamera.localRotation = Quaternion.Euler(rotationX, 0, 0);
-            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * mouseSensitivity, 0);
+            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * sensitivity, 0);
         }
 
         // 2. INPUT GERAKAN

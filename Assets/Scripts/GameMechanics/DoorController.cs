@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class DoorController : MonoBehaviour, IInteractable
 {
@@ -6,6 +7,14 @@ public class DoorController : MonoBehaviour, IInteractable
     public float openAngle = 90f;        // Ubah ke -90f jika arah buka terbalik
     public float openSpeed = 3f;
     public bool isLocked = false;
+    public bool requiresKey = false;     // if true, Interact() while locked checks GameManager.hasKey
+    public string lockedMessage = "[Locked]";
+
+    [Header("Navigation")]
+    // Carves the doorway out of the baked NavMesh while locked, so Candleman can't path into
+    // the room through a door the player hasn't unlocked yet. Disabled permanently the moment
+    // the door is unlocked, granting the monster access from then on (see Interact()/ToggleDoor()).
+    public NavMeshObstacle navMeshObstacle;
 
     [Header("Audio - Open Sound")]
     public AudioClip openSound;
@@ -24,6 +33,8 @@ public class DoorController : MonoBehaviour, IInteractable
     private float closedYAngle;
     private float targetYAngle;
     private float currentYAngle;
+
+    public bool IsOpen => isOpen;
 
     void Start()
     {
@@ -47,6 +58,8 @@ public class DoorController : MonoBehaviour, IInteractable
             doorAudio.minDistance = 1.5f;
             doorAudio.maxDistance = 12f;
         }
+
+        if (navMeshObstacle != null) navMeshObstacle.enabled = isLocked;
     }
 
     void Update()
@@ -66,7 +79,7 @@ public class DoorController : MonoBehaviour, IInteractable
 
     public string GetPromptMessage()
     {
-        if (isLocked) return "[Locked]";
+        if (isLocked) return requiresKey ? "[E] " + lockedMessage : lockedMessage;
         return isOpen ? "[E] Close Door" : "[E] Open Door";
     }
 
@@ -74,8 +87,19 @@ public class DoorController : MonoBehaviour, IInteractable
     {
         if (isLocked)
         {
-            Debug.Log("The door is locked...");
-            return;
+            if (requiresKey && GameManager.Instance != null && GameManager.Instance.hasKey)
+            {
+                isLocked = false;
+                if (navMeshObstacle != null) navMeshObstacle.enabled = false;
+                GameManager.Instance.ShowNotification("Pintu terbuka.");
+                // fall through and open it below
+            }
+            else
+            {
+                if (requiresKey) GameManager.Instance?.ShowNotification(lockedMessage);
+                Debug.Log("The door is locked...");
+                return;
+            }
         }
 
         isOpen = !isOpen;
@@ -90,6 +114,16 @@ public class DoorController : MonoBehaviour, IInteractable
             targetYAngle = closedYAngle;
             PlayCloseAudio();
         }
+    }
+
+    // Forces the door open and locks it so it can't be closed again (used for the Escape Way).
+    public void OpenPermanently()
+    {
+        isLocked = false;
+        isOpen = true;
+        targetYAngle = closedYAngle + openAngle;
+        PlayOpenAudio();
+        isLocked = true; // locked AFTER opening so Interact() can no longer toggle it shut
     }
 
     void PlayOpenAudio()
