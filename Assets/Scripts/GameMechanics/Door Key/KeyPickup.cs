@@ -17,10 +17,11 @@ public class KeyPickup : MonoBehaviour, IInteractable
         // 1. Catat ke sistem inventori static
         KeyInventory.AddKey(keyID);
 
-        // 2. Satu sistem kunci untuk HUD/objective: KeyInventory di atas menyimpan ID kunci
-        // per-pintu, CollectExitKey() yang mengatur flag "punya kunci", teks HUD "Kunci: Ada",
-        // notifikasi, dan objective - sama seperti RoomKey (kunci lama) memakainya.
-        GameManager.Instance?.CollectExitKey();
+        // 2. Tampilkan nama kunci spesifik di HUD GameManager!
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.GrantKey(keyDisplayName);
+        }
 
         Debug.Log($"Collected: {keyDisplayName}!");
 
