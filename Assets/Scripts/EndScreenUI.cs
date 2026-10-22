@@ -28,14 +28,14 @@ public class EndScreenUI : MonoBehaviour
         int mins = Mathf.FloorToInt(elapsed / 60f);
         int secs = Mathf.FloorToInt(elapsed % 60f);
         if (winSummaryText != null)
-            winSummaryText.text = $"PAID IN FULL\n\nCoins tersisa: {coins}\nWave: {wave}\nPembayaran lunas: {payments}/3\nLives: {lives}\nWaktu: {mins:00}:{secs:00}";
+            winSummaryText.text = $"Coins tersisa: {coins}\nWave: {wave}\nPembayaran lunas: {payments}/3\nLives: {lives}\nWaktu: {mins:00}:{secs:00}";
         if (winPanel != null) winPanel.SetActive(true);
     }
 
     public void ShowLose(string reason, int coins, int payments, int lives)
     {
         if (loseSummaryText != null)
-            loseSummaryText.text = $"GAGAL BAYAR\n\nPenyebab: {reason}\nCoins: {coins}\nPembayaran lunas: {payments}/3\nLives: {lives}";
+            loseSummaryText.text = $"Penyebab: {reason}\nCoins: {coins}\nPembayaran lunas: {payments}/3\nLives: {lives}";
         if (losePanel != null) losePanel.SetActive(true);
     }
 
