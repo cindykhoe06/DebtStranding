@@ -28,6 +28,13 @@ public class EnemyAI : MonoBehaviour
     public float catchCooldown = 8f;
     public float attackAnimDuration = 2.5f; // length of the "Attack" (bacok.001) clip
 
+    [Header("Capture Camera Effect")]
+    // During a failed-payment capture, the player camera is reparented onto this hand bone
+    // (auto-found as "hand.L" under the model if left empty) so it swings with the attack,
+    // while continuously looking back at Candleman.
+    public Transform cameraHandAttachPoint;
+    public float captureCameraLookSpeed = 10f;
+
     [Header("Investigate (lured by music)")]
     // Office Room's Gramophone (Gramophone.cs, unchanged) exposes IsPlaying - while debt == 0,
     // a playing gramophone pulls Candleman off its patrol route to go check the sound out.
@@ -110,6 +117,19 @@ public class EnemyAI : MonoBehaviour
         if (modelTransform != null) modelBasePos = modelTransform.localPosition;
 
         crouchCheckMask = ~0; // self-hits are filtered by transform hierarchy in UpdateCrouch, not by layer
+
+        if (cameraHandAttachPoint == null) cameraHandAttachPoint = FindChildByName(transform, "hand.L");
+    }
+
+    static Transform FindChildByName(Transform root, string name)
+    {
+        if (root.name == name) return root;
+        foreach (Transform child in root)
+        {
+            var found = FindChildByName(child, name);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     void Start()
@@ -397,21 +417,57 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // coins < debt: freeze both player and Candleman, play the "Bacok" attack animation in
-    // full view of the camera, then resolve the consequences (life lost, streak wiped,
-    // teleport) only once the animation has actually finished.
+    // coins < debt: freeze both player and Candleman, wrench the player's camera onto
+    // Candleman's hand so it swings through the "Attack" animation looking back at him, then
+    // resolve the consequences (life lost, streak wiped, teleport) only once it's done.
     System.Collections.IEnumerator FailedCaptureSequence(GameManager gm)
     {
         gm?.SetInputLocked(true, showCursor: false);
 
         FacePlayerInstant();
-        var lookTarget = eyePoint != null ? eyePoint.position : transform.position + Vector3.up * 3f;
-        playerCC?.GetComponent<PlayerController>()?.LookAtInstant(lookTarget);
 
         if (animator != null) animator.speed = 1f; // guarantee full-speed playback regardless of the chase-scaled speed set before the freeze
         PlayAnimTrigger(catchTrigger);
 
-        yield return new WaitForSeconds(attackAnimDuration);
+        var playerController = playerCC != null ? playerCC.GetComponent<PlayerController>() : null;
+        Transform cam = playerController != null ? playerController.playerCamera : null;
+        bool camAttached = cam != null && cameraHandAttachPoint != null;
+
+        Transform originalParent = null;
+        Vector3 originalLocalPos = Vector3.zero;
+        Quaternion originalLocalRot = Quaternion.identity;
+
+        if (camAttached)
+        {
+            originalParent = cam.parent;
+            originalLocalPos = cam.localPosition;
+            originalLocalRot = cam.localRotation;
+            cam.SetParent(cameraHandAttachPoint, true); // worldPositionStays: no jarring pop at the moment of the grab
+        }
+
+        float elapsed = 0f;
+        while (elapsed < attackAnimDuration)
+        {
+            if (camAttached)
+            {
+                Vector3 lookPoint = eyePoint != null ? eyePoint.position : transform.position + Vector3.up * 3f;
+                Vector3 dir = lookPoint - cam.position;
+                if (dir.sqrMagnitude > 0.0001f)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(dir.normalized, Vector3.up);
+                    cam.rotation = Quaternion.Slerp(cam.rotation, targetRot, Time.unscaledDeltaTime * captureCameraLookSpeed);
+                }
+            }
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (camAttached)
+        {
+            cam.SetParent(originalParent, false);
+            cam.localPosition = originalLocalPos;
+            cam.localRotation = originalLocalRot;
+        }
 
         gm?.ResolveFailedCapture(playerCC);
 

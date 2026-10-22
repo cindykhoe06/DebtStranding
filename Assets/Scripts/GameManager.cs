@@ -252,7 +252,7 @@ public class GameManager : MonoBehaviour
     public void GrantKey()
     {
         hasKey = true;
-        if (keyText != null) keyText.text = "Kunci: Didapat";
+        if (keyText != null) keyText.text = "Kunci: Ada";
         ShowNotification("Kamu mendapatkan kunci ruangan!");
         UpdateUI();
     }
@@ -283,7 +283,7 @@ public class GameManager : MonoBehaviour
         }
 
         if (paymentsText) paymentsText.text = $"Settled Payment: {settledPayments}/3";
-        if (keyText) keyText.text = hasKey ? "Kunci: Didapat" : "Kunci: Belum ada";
+        if (keyText) keyText.text = hasKey ? "Kunci: Ada" : "Kunci: Belum ada";
     }
 
     void TriggerGameOver(string reason)
