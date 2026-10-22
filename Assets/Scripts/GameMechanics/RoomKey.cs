@@ -42,6 +42,7 @@ public class RoomKey : MonoBehaviour, IInteractable
         proximityAudio.minDistance = 1.5f;
         proximityAudio.maxDistance = proximityRadius + 3f;
         proximityAudio.volume = chimeVolume;
+        proximityAudio.outputAudioMixerGroup = SettingsManager.SFXGroup;
 
         var glowGO = new GameObject("KeyGlow");
         glowGO.transform.SetParent(transform, false);
@@ -96,7 +97,19 @@ public class RoomKey : MonoBehaviour, IInteractable
         collected = true;
 
         GameManager.Instance?.GrantKey();
-        if (pickupSound != null) AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+        if (pickupSound != null)
+        {
+            // Not AudioSource.PlayClipAtPoint - its internal AudioSource can't be routed to a
+            // mixer group, so Master/SFX sliders would silently miss this one sound.
+            var tempGO = new GameObject("TempKeyPickupAudio");
+            tempGO.transform.position = transform.position;
+            var tempSource = tempGO.AddComponent<AudioSource>();
+            tempSource.clip = pickupSound;
+            tempSource.spatialBlend = 1f;
+            tempSource.outputAudioMixerGroup = SettingsManager.SFXGroup;
+            tempSource.Play();
+            Destroy(tempGO, pickupSound.length);
+        }
 
         GetComponent<Collider>().enabled = false;
         if (proximityTrigger != null) proximityTrigger.enabled = false;

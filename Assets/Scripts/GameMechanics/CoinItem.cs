@@ -53,6 +53,7 @@ public class CoinItem : MonoBehaviour, IInteractable
             source.clip = pickupSound;
             source.spatialBlend = 0f; // 2D jelas di telinga
             source.time = skipSilenceTime; // LOMPAT MELEWATI DETIK KOSONG!
+            source.outputAudioMixerGroup = SettingsManager.SFXGroup;
             source.Play();
 
             Destroy(tempAudio, pickupSound.length);
