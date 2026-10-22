@@ -1,9 +1,20 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
+
+    [Header("Enemy Capture")]
+    public Transform playerSpawnPoint;       // Lobby spawn - where player is sent back to when caught
+    public Image captureFlashImage;          // Full-screen red overlay on GameHUD (alpha animates in/out)
+    public float captureFlashDuration = 0.6f;
+    public AudioSource sfxAudioSource;       // Shared one-shot SFX player on GameManager
+    public AudioClip captureSound;
+
+    public bool IsGameOver => isGameOver;
+    public bool HasWon => hasWon;
 
     [Header("UI - Top Left (Finances)")]
     public TextMeshProUGUI coinsText;
@@ -173,5 +184,55 @@ public class GameManager : MonoBehaviour
         hasWon = true;
         Debug.Log("VICTORY - 3/3 payments settled! Usher unlocks the hidden exit.");
         // Trigger Usher escape escort here
+    }
+
+    // Called by EnemyAI when it catches the player.
+    public void OnPlayerCaught(CharacterController playerController)
+    {
+        if (isGameOver || hasWon) return;
+
+        if (DebugManager.Invincible)
+        {
+            Debug.Log("[DEBUG] Invincible active - caught but no life lost.");
+        }
+        else
+        {
+            lives--;
+            Debug.Log($"Caught by the enemy! Lives left: {lives}");
+        }
+
+        UpdateUI();
+
+        if (captureFlashImage != null) StartCoroutine(FlashCapture());
+        if (sfxAudioSource != null && captureSound != null) sfxAudioSource.PlayOneShot(captureSound);
+
+        RespawnPlayerAtLobby(playerController);
+
+        if (!DebugManager.Invincible && lives <= 0) TriggerGameOver();
+    }
+
+    void RespawnPlayerAtLobby(CharacterController playerController)
+    {
+        if (playerController == null || playerSpawnPoint == null) return;
+
+        // CharacterController must be disabled while we teleport it, otherwise
+        // its internal collision resolution fights the position change.
+        playerController.enabled = false;
+        playerController.transform.SetPositionAndRotation(playerSpawnPoint.position, playerSpawnPoint.rotation);
+        playerController.enabled = true;
+    }
+
+    System.Collections.IEnumerator FlashCapture()
+    {
+        Color baseColor = captureFlashImage.color;
+        float t = 0f;
+        while (t < captureFlashDuration)
+        {
+            t += Time.deltaTime;
+            float a = Mathf.Sin(Mathf.Clamp01(t / captureFlashDuration) * Mathf.PI); // fade in then out
+            captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, a * 0.6f);
+            yield return null;
+        }
+        captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
     }
 }
