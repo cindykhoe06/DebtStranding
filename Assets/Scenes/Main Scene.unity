@@ -26842,7 +26842,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &47414936
 Transform:
   m_ObjectHideFlags: 0
@@ -59034,17 +59034,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed29a98745f8b456f8bf8c16c0397fe6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorController
-  openAngle: 90
-  openSpeed: 3
-  isLocked: 1
-  requiredKeyID: OfficeKey
-  lockedMessage: Terkunci - butuh kunci
-  openSound: {fileID: 8300000, guid: d1452c84c53234e7faae275745edffe1, type: 3}
-  openSkipSilence: 0.2
-  closeSound: {fileID: 8300000, guid: 76f19630bf75a4e3886301e675674a03, type: 3}
-  closeSkipSilence: 0.1
-  closeSpeedPitch: 1.35
-  doorAudio: {fileID: 106242882}
 --- !u!82 &106242882
 AudioSource:
   m_ObjectHideFlags: 0
@@ -93844,7 +93833,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &172475471
 Transform:
   m_ObjectHideFlags: 0
@@ -137541,7 +137530,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &254106272
 Transform:
   m_ObjectHideFlags: 0
@@ -191918,7 +191907,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &351259080
 Transform:
   m_ObjectHideFlags: 0
@@ -197952,7 +197941,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &360816395
 Transform:
   m_ObjectHideFlags: 0
@@ -270637,7 +270626,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &493016653
 Transform:
   m_ObjectHideFlags: 0
@@ -305174,7 +305163,7 @@ MonoBehaviour:
   settledPayments: 0
   currentWave: 0
   hasKey: 0
-  waveDuration: 10
+  waveDuration: 180
   endScreenUI: {fileID: 557089476}
   pauseMenu: {fileID: 1390174576}
 --- !u!4 &557089473
@@ -320551,7 +320540,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &585178509
 Transform:
   m_ObjectHideFlags: 0
@@ -453555,7 +453544,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &830493931
 Transform:
   m_ObjectHideFlags: 0
@@ -580366,7 +580355,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1075905266
 Transform:
   m_ObjectHideFlags: 0
@@ -673961,7 +673950,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1252192959
 Transform:
   m_ObjectHideFlags: 0
@@ -689637,7 +689626,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1276753374
 Transform:
   m_ObjectHideFlags: 0
@@ -720901,7 +720890,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1331754719
 Transform:
   m_ObjectHideFlags: 0
@@ -827251,7 +827240,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4629599965816769349, guid: 26cffa84212cd51448f1a2c3ed0467e0, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5437098259998511615, guid: 26cffa84212cd51448f1a2c3ed0467e0, type: 3}
       propertyPath: m_LocalPosition.x
@@ -846685,7 +846674,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!108 &1558873829
 Light:
   m_ObjectHideFlags: 0
@@ -979495,7 +979484,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1806237714
 Transform:
   m_ObjectHideFlags: 0
@@ -1034188,17 +1034177,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ed29a98745f8b456f8bf8c16c0397fe6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorController
-  openAngle: 90
-  openSpeed: 3
-  isLocked: 1
-  requiredKeyID: RepairKey
-  lockedMessage: Terkunci - butuh kunci
-  openSound: {fileID: 8300000, guid: d1452c84c53234e7faae275745edffe1, type: 3}
-  openSkipSilence: 0.2
-  closeSound: {fileID: 8300000, guid: 76f19630bf75a4e3886301e675674a03, type: 3}
-  closeSkipSilence: 0.1
-  closeSpeedPitch: 1.35
-  doorAudio: {fileID: 1909557604}
 --- !u!114 &1909557606
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1037972,7 +1037950,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1916037003
 Transform:
   m_ObjectHideFlags: 0
@@ -1102111,7 +1102089,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &2036313015
 Transform:
   m_ObjectHideFlags: 0
