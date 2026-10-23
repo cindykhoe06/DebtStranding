@@ -59071,7 +59071,6 @@ GameObject:
   - component: {fileID: 106242879}
   - component: {fileID: 106242881}
   - component: {fileID: 106242882}
-  - component: {fileID: 106242883}
   m_Layer: 0
   m_Name: hinge
   m_TagString: Untagged
@@ -59215,29 +59214,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &106242883
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 106242878}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ed29a98745f8b456f8bf8c16c0397fe6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoorController
-  openAngle: 90
-  openSpeed: 3
-  isLocked: 1
-  requiredKeyID: OfficeKey
-  lockedMessage: '[Locked - Requires Office Key]'
-  openSound: {fileID: 8300000, guid: d1452c84c53234e7faae275745edffe1, type: 3}
-  openSkipSilence: 0.3
-  closeSound: {fileID: 8300000, guid: 76f19630bf75a4e3886301e675674a03, type: 3}
-  closeSkipSilence: 0.1
-  closeSpeedPitch: 1.35
-  doorAudio: {fileID: 106242882}
 --- !u!1001 &106563078
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -552329,7 +552305,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1017573000
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1037712,7 +1037688,6 @@ GameObject:
   - component: {fileID: 1909557603}
   - component: {fileID: 1909557605}
   - component: {fileID: 1909557604}
-  - component: {fileID: 1909557606}
   m_Layer: 0
   m_Name: hinge
   m_TagString: Untagged
@@ -1037852,29 +1037827,6 @@ MonoBehaviour:
   lockedMessage: Terkunci - butuh kunci
   openSound: {fileID: 8300000, guid: d1452c84c53234e7faae275745edffe1, type: 3}
   openSkipSilence: 0.2
-  closeSound: {fileID: 8300000, guid: 76f19630bf75a4e3886301e675674a03, type: 3}
-  closeSkipSilence: 0.1
-  closeSpeedPitch: 1.35
-  doorAudio: {fileID: 1909557604}
---- !u!114 &1909557606
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1909557602}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ed29a98745f8b456f8bf8c16c0397fe6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoorController
-  openAngle: 90
-  openSpeed: 3
-  isLocked: 1
-  requiredKeyID: RepairKey
-  lockedMessage: '[Locked - Requires Office Key]'
-  openSound: {fileID: 8300000, guid: d1452c84c53234e7faae275745edffe1, type: 3}
-  openSkipSilence: 0.3
   closeSound: {fileID: 8300000, guid: 76f19630bf75a4e3886301e675674a03, type: 3}
   closeSkipSilence: 0.1
   closeSpeedPitch: 1.35

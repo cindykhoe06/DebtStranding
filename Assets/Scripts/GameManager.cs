@@ -83,6 +83,10 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        // KeyInventory is a static HashSet, so it survives the Main Scene reload Retry does -
+        // without this, DoorController would see the old keys as already collected and stay
+        // unlocked after dying and retrying, even though every other piece of state is fresh.
+        KeyInventory.ResetInventory();
         timeRemaining = waveDuration;
         UpdateUI();
     }
@@ -248,7 +252,6 @@ public class GameManager : MonoBehaviour
     public void CollectExitKey()
     {
         hasKey = true;
-        if (keyText != null) keyText.text = "Kunci: Ada";
         ShowNotification("Kamu mendapatkan kunci ruangan!");
         UpdateUI();
     }
@@ -266,7 +269,11 @@ public class GameManager : MonoBehaviour
         if (coinsText) coinsText.text = $"Coins: {coins}";
         if (debtText) debtText.text = $"Debt: {debt}";
 
-        if (waveText && !hasKey) waveText.text = "Periksa lukisan di Main Gallery untuk menemukan kunci";
+        bool hasOfficeKey = KeyInventory.HasKey("OfficeKey");
+        bool hasRepairKey = KeyInventory.HasKey("RepairKey");
+        bool hasBothKeys = hasOfficeKey && hasRepairKey;
+
+        if (waveText && !hasBothKeys) waveText.text = "Periksa lukisan di Main Gallery";
         else if (waveText && lockedDoorsRemaining > 0) waveText.text = "Buka ruangan terkunci di Main Hall";
         else if (waveText && currentWave == 0) waveText.text = "Free Exploration";
         else if (waveText && settledPayments < 3) waveText.text = $"Wave {currentWave}";
@@ -279,7 +286,7 @@ public class GameManager : MonoBehaviour
         }
 
         if (paymentsText) paymentsText.text = $"Settled Payment: {settledPayments}/3";
-        if (keyText) keyText.text = hasKey ? "Kunci: Ada" : "Kunci: Belum ada";
+        if (keyText) keyText.text = $"Kunci Office: {(hasOfficeKey ? "Ada" : "Belum")}\nKunci Reparation: {(hasRepairKey ? "Ada" : "Belum")}";
     }
 
     void TriggerGameOver(string reason)
@@ -331,6 +338,7 @@ public class GameManager : MonoBehaviour
         currentWave = 0;
         hasKey = false;
         lockedDoorsRemaining = 2;
+        KeyInventory.ResetInventory();
         timeRemaining = waveDuration;
         bellPlayedThisWave = false;
         isGameOver = false;

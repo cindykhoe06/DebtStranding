@@ -10,6 +10,9 @@ public class PlayerInteraction : MonoBehaviour
     public TextMeshProUGUI promptText; // Drag Text_InteractionPrompt here
 
     private Camera playerCam;
+#if UNITY_EDITOR
+    private string lastHitName;
+#endif
 
     void Start()
     {
@@ -33,7 +36,13 @@ public class PlayerInteraction : MonoBehaviour
         // Cast a ray forward from the center of the camera
         if (Physics.Raycast(ray, out hit, interactDistance))
         {
-            Debug.Log("Hit object: " + hit.collider.gameObject.name);
+#if UNITY_EDITOR
+            if (hit.collider.gameObject.name != lastHitName)
+            {
+                lastHitName = hit.collider.gameObject.name;
+                Debug.Log("Hit object: " + lastHitName);
+            }
+#endif
             // Look for any component that implements IInteractable
             IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
 
@@ -50,6 +59,9 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         // Hide prompt if looking at a normal wall/air
+#if UNITY_EDITOR
+        lastHitName = null;
+#endif
         HidePrompt();
     }
 
