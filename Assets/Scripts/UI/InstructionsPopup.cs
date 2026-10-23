@@ -1,27 +1,22 @@
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
-// Visitor Rules-styled instructions popup. Shows once automatically at game start, and can
-// be reopened any time via the HUD icon, Tab, or I. Pauses the game while open.
 public class InstructionsPopup : MonoBehaviour
 {
     public static InstructionsPopup Instance;
 
     [Header("UI References")]
-    public GameObject panelRoot;
-    public TextMeshProUGUI instructionsText; // Slot untuk TextMeshPro teks rules
+    public GameObject panelRoot;            // Dibutuhkan oleh PauseMenu.cs
+    public TextMeshProUGUI instructionsText; // Slot Text_Instructions kamu
 
-    [Header("Rules Content (Auto-set to avoid Unity Editor inspector bugs)")]
+    [Header("Default Instructions")]
     [TextArea(10, 25)]
     public string defaultRules = 
-@"MUSEUM VISITOR CODE
-
-1. GRATIS 5 MENIT PERTAMA
+@"1. GRATIS 3 MENIT PERTAMA
 Gunakan waktu untuk menjelajah & mengumpulkan koin.
 
 2. HUTANG & BUNGA 20%
-Tiap 5 menit, tagihan 20 Koin bertambah.
+Tiap 3 menit, tagihan 20 Koin bertambah.
 Hutang belum lunas kena bunga 20% majemuk.
 
 3. PETUGAS PENAGIH (USHER)
@@ -34,76 +29,27 @@ Lunasi hutang 3 KALI BERTURUT-TURUT untuk membuka pintu keluar.
 KONTROL:
 WASD    : Bergerak
 Shift   : Lari
-E       : Interaksi (Pintu / Laci / Kunci)
-Tab / I : Buka / Tutup Panduan ini
+E       : Interaksi
+Tab / I : Buka/Tutup Panduan
 ESC     : Pause Menu";
 
-    bool openedBefore;
-    bool wasPausedByPauseMenu; // avoid double-resuming if PauseMenu is also open
-
-    // Section names expected in Assets/Resources/Text/instructions.txt - each one maps to an
-    // existing child TMP object under Paper/Viewport/Content with the same name. If the file
-    // or a section is missing, that object just keeps whatever text is already in the scene.
-    static readonly string[] TextSections = { "Title", "Subtitle", "Rule1", "Rule2", "Rule3", "Rule4", "Rule5", "Rule6", "Rule7", "Controls", "Closing" };
+    private bool openedBefore = false;
 
     void Awake()
     {
         Instance = this;
         if (panelRoot != null) panelRoot.SetActive(false);
-        LoadTextOverrides();
-    }
-
-    void LoadTextOverrides()
-    {
-        var textAsset = Resources.Load<TextAsset>("Text/instructions");
-        if (textAsset == null || panelRoot == null) return;
-
-        var content = panelRoot.transform.Find("Paper/Viewport/Content");
-        if (content == null) return;
-
-        var sections = ParseSections(textAsset.text);
-        foreach (var name in TextSections)
-        {
-            if (!sections.TryGetValue(name.ToUpperInvariant(), out var value)) continue;
-            var child = content.Find(name);
-            var tmp = child != null ? child.GetComponent<TMPro.TextMeshProUGUI>() : null;
-            if (tmp != null) tmp.text = value;
-        }
-    }
-
-    // Parses a simple "###KEY\n<content until next ###KEY>" format so multi-line sections
-    // (e.g. Controls) work without needing a single-line KEY=VALUE scheme.
-    static Dictionary<string, string> ParseSections(string raw)
-    {
-        var result = new Dictionary<string, string>();
-        string currentKey = null;
-        var currentValue = new System.Text.StringBuilder();
-
-        foreach (var line in raw.Replace("\r\n", "\n").Split('\n'))
-        {
-            if (line.StartsWith("###"))
-            {
-                if (currentKey != null) result[currentKey] = currentValue.ToString().TrimEnd('\n');
-                currentKey = line.Substring(3).Trim().ToUpperInvariant();
-                currentValue.Clear();
-            }
-            else if (currentKey != null)
-            {
-                currentValue.AppendLine(line);
-            }
-        }
-        if (currentKey != null) result[currentKey] = currentValue.ToString().TrimEnd('\n');
-        return result;
     }
 
     void Start()
     {
-        // Pasang teks otomatis agar tidak perlu paste manual di TextMeshPro Inspector
+        // Pasang teks otomatis
         if (instructionsText != null && !string.IsNullOrEmpty(defaultRules))
         {
             instructionsText.text = defaultRules;
         }
 
+        // Tampilkan otomatis sekali di awal game
         Show(auto: true);
     }
 
@@ -112,6 +58,8 @@ ESC     : Pause Menu";
         if (GameManager.Instance != null && (GameManager.Instance.IsGameOver || GameManager.Instance.HasWon)) return;
 
         bool isOpen = panelRoot != null && panelRoot.activeSelf;
+
+        // Toggle via Tab atau I
         if ((Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.I)) && !isOpen)
         {
             Show(auto: false);
@@ -122,22 +70,37 @@ ESC     : Pause Menu";
         }
     }
 
+    // Dibutuhkan oleh PauseMenu.cs
     public void Show(bool auto)
     {
         if (auto && openedBefore) return;
         openedBefore = true;
 
         if (panelRoot != null) panelRoot.SetActive(true);
-        var scrollRect = panelRoot != null ? panelRoot.GetComponentInChildren<UnityEngine.UI.ScrollRect>() : null;
-        if (scrollRect != null) scrollRect.verticalNormalizedPosition = 1f; // always open scrolled to the top
+
         Time.timeScale = 0f;
-        GameManager.Instance?.SetInputLocked(true);
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.SetInputLocked(true);
+        }
     }
 
     public void Close()
     {
         if (panelRoot != null) panelRoot.SetActive(false);
+
         Time.timeScale = 1f;
-        GameManager.Instance?.SetInputLocked(false);
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.SetInputLocked(false);
+        }
+    }
+
+    // Helper untuk tombol UI
+    public void TogglePopup()
+    {
+        bool isOpen = panelRoot != null && panelRoot.activeSelf;
+        if (isOpen) Close();
+        else Show(auto: false);
     }
 }

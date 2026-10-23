@@ -1,14 +1,29 @@
 using UnityEngine;
 
-// Placed at the Escape Way exit point. Fires WIN once the player physically reaches it
-// (GameManager.OnReachExit() itself still checks settledPayments >= 3 as a safety net).
+[RequireComponent(typeof(Collider))]
 public class ExitTrigger : MonoBehaviour
 {
+    private bool hasTriggered = false;
+
+    void Awake()
+    {
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.isTrigger = true;
+    }
+
     void OnTriggerEnter(Collider other)
     {
-        if (other.GetComponent<CharacterController>() != null)
+        if (hasTriggered) return;
+
+        // Cek jika yang menginjak tangga adalah Player (bisa via Tag "Player" atau CharacterController)
+        if (other.CompareTag("Player") || other.GetComponent<CharacterController>() != null || other.name == "hero")
         {
-            GameManager.Instance?.OnReachExit();
+            hasTriggered = true;
+            Debug.Log("<color=green>Player reached exit trigger!</color>");
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnReachExit();
+            }
         }
     }
 }

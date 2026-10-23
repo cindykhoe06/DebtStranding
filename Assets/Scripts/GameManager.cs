@@ -52,8 +52,9 @@ public class GameManager : MonoBehaviour
     public BlackoutManager blackoutManager;
 
     [Header("Escape")]
-    public GameObject escapeWayRoot;    // "Escape Way (Hidden)" - revealed once settledPayments reaches 3
-    public GameObject escapeWayBarrier; // final wall blocking the way out - deactivated at the same time
+    public GameObject escapeWayRoot;    // "Escape Way (Hidden)"
+    public GameObject escapeWayBarrier; // final wall blocking the way out
+    public GameObject[] temporaryWalls; // 3x wall (temporary) di Starting Room
 
     [Header("Game State")]
     public int coins = 0;
@@ -93,8 +94,15 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        // === TOMBOL TEST PENGUJIAN INSTAN ===
+        // if (Input.GetKeyDown(KeyCode.K))
+        // {
+        //     Debug.Log("<color=cyan>[DEBUG] Tombol K ditekan: Membuka Escape Way secara paksa!</color>");
+        //     settledPayments = 3;
+        //     OpenEscapeWay();
+        // }
         if (isGameOver || hasWon) return;
-
+        
         if (timeRemaining > 0)
         {
             timeRemaining -= Time.deltaTime;
@@ -194,12 +202,55 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void OpenEscapeWay()
+    public void OpenEscapeWay()
     {
-        if (escapeWayRoot != null) escapeWayRoot.SetActive(true);
+        Debug.Log("<color=green>[ESCAPE] OpenEscapeWay() DIPANGGIL!</color>");
+
+        if (escapeWayRoot != null)
+        {
+            escapeWayRoot.SetActive(true);
+            Debug.Log("[ESCAPE] escapeWayRoot diaktifkan: " + escapeWayRoot.name);
+        }
+        else
+        {
+            Debug.LogError("[ESCAPE] escapeWayRoot KOSONG (None) di Inspector GameManager!");
+        }
+
         if (escapeWayBarrier != null) escapeWayBarrier.SetActive(false);
+
+        if (temporaryWalls != null)
+        {
+            foreach (var wall in temporaryWalls)
+            {
+                if (wall != null)
+                {
+                    wall.SetActive(false);
+                    Debug.Log("[ESCAPE] wall dimatikan: " + wall.name);
+                }
+            }
+        }
+
         SetObjective("Jalan keluar terbuka!");
-        ShowNotification("Semua tagihan lunas! Jalan keluar terbuka.");
+
+        // Jalankan urutan notifikasi: Notif 1 (hilang) -> Notif 2 (stay terus di layar)
+        if (notificationRoutine != null) StopCoroutine(notificationRoutine);
+        notificationRoutine = StartCoroutine(EscapeNotificationSequence());
+    }
+
+        System.Collections.IEnumerator EscapeNotificationSequence()
+    {
+        if (notificationText == null) yield break;
+
+        notificationText.text = "Semua tagihan lunas! Jalan keluar terbuka.";
+        notificationText.gameObject.SetActive(true);
+
+        yield return new WaitForSecondsRealtime(notificationDuration);
+
+        notificationText.gameObject.SetActive(false);
+        yield return new WaitForSecondsRealtime(0.3f);
+
+        notificationText.text = "Jalan Keluar ada di Starting Room!";
+        notificationText.gameObject.SetActive(true);
     }
 
     public void OnReachExit()
@@ -345,4 +396,6 @@ public class GameManager : MonoBehaviour
         hasWon = false;
         UpdateUI();
     }
+
+    
 }

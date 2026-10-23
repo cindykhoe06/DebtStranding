@@ -43,11 +43,6 @@ public class EnemyAI : MonoBehaviour
     float investigateTimer;
 
     [Header("Crouch Through Low Doorways")]
-    // The baked NavMesh already has enough headroom for doorways (built with a 2m agent
-    // height), but the tall visual model would otherwise clip through door frames/lintels.
-    // A raycast straight up from the feet detects low ceilings and bends the model down to
-    // clear them, standing back up once past.
-    public float crouchCheckHeight = 4.2f;   // roughly up to EyePoint; a hit closer than this means duck
     public float crouchLowerAmount = 0.9f;
     public float crouchLerpSpeed = 4f;
     public string crouchTrigger = "Nunduk";
@@ -75,14 +70,9 @@ public class EnemyAI : MonoBehaviour
     public string catchTrigger = "Attack";
 
     [Header("Rotation")]
-    // NavMeshAgent.updateRotation is turned off on this agent (see scene setup) so turning
-    // is fully manual here - smoother and less "snappy" than the agent's own angularSpeed-based turn.
     public float rotationSlerpSpeed = 10f;
 
     [Header("Animation Speed (reduces foot sliding)")]
-    // This rig has no root motion, so the walk/run clip's leg cadence never naturally
-    // matches actual NavMeshAgent travel speed. Scaling animator.speed by (actual / nominal)
-    // keeps the legs roughly in sync with real movement instead of sliding across the floor.
     public float minAnimSpeed = 0.6f;
     public float maxAnimSpeed = 2.2f;
 
@@ -95,8 +85,6 @@ public class EnemyAI : MonoBehaviour
     float cooldownTimer;
     Vector3 lastKnownPlayerPos;
 
-    // Final design: the Candleman is only a threat while debt > 0. At debt == 0 it patrols
-    // but never engages, even if it sees/hears the player.
     static bool IsDangerous => GameManager.Instance != null && GameManager.Instance.debt > 0;
 
     void Awake()
@@ -116,7 +104,7 @@ public class EnemyAI : MonoBehaviour
         modelTransform = transform.Find("Model");
         if (modelTransform != null) modelBasePos = modelTransform.localPosition;
 
-        crouchCheckMask = ~0; // self-hits are filtered by transform hierarchy in UpdateCrouch, not by layer
+        crouchCheckMask = ~0;
 
         if (cameraHandAttachPoint == null) cameraHandAttachPoint = FindChildByName(transform, "hand.L");
     }
@@ -181,9 +169,6 @@ public class EnemyAI : MonoBehaviour
         animator.speed = Mathf.Clamp(speed / Mathf.Max(reference, 0.01f), minAnimSpeed, maxAnimSpeed);
     }
 
-    // Smoothly turns the whole rig toward its current movement direction. Replaces
-    // NavMeshAgent's built-in rotation (disabled via updateRotation=false) to avoid the
-    // abrupt, "patah-patah" turning the agent's own angularSpeed-based rotation produced.
     void UpdateFacing()
     {
         Vector3 flatVel = agent.velocity;
@@ -194,12 +179,6 @@ public class EnemyAI : MonoBehaviour
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSlerpSpeed);
     }
 
-    // The enemy's root sits at floor height (NavMeshAgent keeps it on the navmesh surface)
-    // while the player's root sits at the CharacterController's CENTER height. A plain
-    // Vector3.Distance between the two roots therefore carries a built-in ~1.1m vertical
-    // offset that is negligible at 15m/8m ranges but was previously large enough, relative
-    // to the 1.2m catch radius, to make the catch check unreliable. Every gameplay distance
-    // check here uses the horizontal (XZ) distance instead.
     static float HorizontalDistance(Vector3 a, Vector3 b)
     {
         Vector3 flatA = new Vector3(a.x, 0f, a.z);
@@ -221,7 +200,6 @@ public class EnemyAI : MonoBehaviour
         Vector3 flatToPlayer = toPlayer; flatToPlayer.y = 0f;
         if (Vector3.Angle(flatForward, flatToPlayer) > viewAngle * 0.5f) return false;
 
-        // Blocked only if the ray hits something that ISN'T the player before reaching them.
         if (Physics.Raycast(origin, toPlayer.normalized, out RaycastHit hit, toPlayer.magnitude, sightObstructionMask, QueryTriggerInteraction.Ignore))
         {
             if (!hit.transform.IsChildOf(player) && hit.transform != player) return false;
@@ -243,11 +221,6 @@ public class EnemyAI : MonoBehaviour
     {
         agent.speed = patrolSpeed;
 
-        // Hunting mode: the moment there's debt, Candleman beelines the player's live
-        // position from anywhere on the map - no line-of-sight or hearing-range check
-        // needed. (Previously this required CanSeePlayer()/CanHearPlayer(), which meant a
-        // player who wasn't sprinting and wasn't in the ~100 degree FOV cone was simply never
-        // detected, even with an active debt - that was the "Candleman doesn't chase" bug.)
         if (IsDangerous)
         {
             EnterChase();
@@ -277,7 +250,6 @@ public class EnemyAI : MonoBehaviour
 
     void UpdateChase()
     {
-        // Debt got settled (e.g. caught mid-chase and auto-paid) - stand down immediately.
         if (!IsDangerous) { EnterPatrol(); return; }
 
         agent.speed = chaseSpeed;
@@ -285,17 +257,11 @@ public class EnemyAI : MonoBehaviour
 
         agent.SetDestination(player.position);
 
-        // Fallback catch check (the SphereCollider trigger below is the primary detector).
         float dist = HorizontalDistance(transform.position, player.position);
         if (dist <= catchDistance)
         {
             CatchPlayer();
         }
-
-        // No more dropping to Search while dangerous: hunting mode means Candleman keeps
-        // retargeting the player's live position every frame, relentlessly, for as long as
-        // debt > 0 (see UpdatePatrol). Search is still reachable if a future design wants a
-        // "lost the scent" moment, but nothing currently triggers it.
     }
 
     void UpdateSearch()
@@ -327,8 +293,6 @@ public class EnemyAI : MonoBehaviour
         if (cooldownTimer <= 0f) EnterPatrol();
     }
 
-    // Lured off patrol by a playing Gramophone: walk to it, wait investigateWaitDuration,
-    // then resume the patrol route. Debt turning on (hunting mode) always interrupts this.
     void UpdateInvestigate()
     {
         if (IsDangerous) { EnterChase(); return; }
@@ -394,8 +358,8 @@ public class EnemyAI : MonoBehaviour
 
     void CatchPlayer()
     {
-        if (state == State.Cooldown) return; // already caught this cycle - ignore repeat triggers
-        if (!IsDangerous) return; // debt == 0: touching Candleman has no effect whatsoever
+        if (state == State.Cooldown) return;
+        if (!IsDangerous) return;
 
         var gm = GameManager.Instance;
         bool canPay = gm != null && gm.coins >= gm.debt;
@@ -407,8 +371,11 @@ public class EnemyAI : MonoBehaviour
 
         if (canPay)
         {
-            // Paid on the spot: no attack animation, no teleport, Candleman just stands
-            // down and the cooldown timer (already started above) carries it back to patrol.
+            // === TAMBAHKAN BARIS INI ===
+            // Hentikan lari seketika dan ganti animasi ke Idle selama cooldown
+            PlayAnimTrigger("Idle");
+
+            // Lunasi hutang
             gm.ResolvePaidCapture();
         }
         else
@@ -417,16 +384,13 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    // coins < debt: freeze both player and Candleman, wrench the player's camera onto
-    // Candleman's hand so it swings through the "Attack" animation looking back at him, then
-    // resolve the consequences (life lost, streak wiped, teleport) only once it's done.
     System.Collections.IEnumerator FailedCaptureSequence(GameManager gm)
     {
         gm?.SetInputLocked(true, showCursor: false);
 
         FacePlayerInstant();
 
-        if (animator != null) animator.speed = 1f; // guarantee full-speed playback regardless of the chase-scaled speed set before the freeze
+        if (animator != null) animator.speed = 1f;
         PlayAnimTrigger(catchTrigger);
 
         var playerController = playerCC != null ? playerCC.GetComponent<PlayerController>() : null;
@@ -442,7 +406,7 @@ public class EnemyAI : MonoBehaviour
             originalParent = cam.parent;
             originalLocalPos = cam.localPosition;
             originalLocalRot = cam.localRotation;
-            cam.SetParent(cameraHandAttachPoint, true); // worldPositionStays: no jarring pop at the moment of the grab
+            cam.SetParent(cameraHandAttachPoint, true);
         }
 
         float elapsed = 0f;
@@ -471,14 +435,9 @@ public class EnemyAI : MonoBehaviour
 
         gm?.ResolveFailedCapture(playerCC);
 
-        // Don't unlock input if that resolution just triggered LOSE - TriggerGameOver already
-        // re-locked it (with the cursor shown) for the end screen, and we'd otherwise stomp it.
         if (gm != null && !gm.IsGameOver) gm.SetInputLocked(false);
     }
 
-    // Snaps Candleman's yaw to face the player instantly, so the attack animation that's
-    // about to play is clearly facing the camera instead of whatever direction it was last
-    // moving in (UpdateFacing() stops updating once the agent is stationary).
     void FacePlayerInstant()
     {
         if (player == null) return;
@@ -493,9 +452,6 @@ public class EnemyAI : MonoBehaviour
         if (animator != null && !string.IsNullOrEmpty(trigger)) animator.SetTrigger(trigger);
     }
 
-    // Primary catch detector: a SphereCollider (isTrigger) placed on this same GameObject.
-    // Using a real trigger avoids the center-to-center distance math entirely, so it isn't
-    // thrown off by the enemy/player root height mismatch described above.
     void OnTriggerEnter(Collider other) => TryCatchFromTrigger(other);
     void OnTriggerStay(Collider other) => TryCatchFromTrigger(other);
 
@@ -507,23 +463,25 @@ public class EnemyAI : MonoBehaviour
         CatchPlayer();
     }
 
-    // Raycasts straight up from the feet; if something is closer overhead than
-    // crouchCheckHeight (a door frame/lintel), plays the "Nunduk" duck animation and lowers
-    // the visual model a bit until clear of it, then stands back up.
-    //
-    // Uses RaycastAll + a hierarchy check (not a layer mask) to skip Candleman's own colliders:
-    // a layer-based exclusion would also exclude every other object sharing that layer (most of
-    // the museum geometry, including door lintels, all sit on the Default layer too).
-    static readonly RaycastHit[] crouchHitsBuffer = new RaycastHit[8];
+    // Menggunakan volume OverlapBox di area kepala atas dan sedikit di depan
+    // untuk mendeteksi kusen pintu (lintel) tanpa meleset
+    static readonly Collider[] crouchOverlapsBuffer = new Collider[6];
     void UpdateCrouch()
     {
-        Vector3 origin = transform.position + Vector3.up * 0.2f;
+        // Kotak deteksi tepat di atas kepala dan agak ke depan (arah langkah)
+        Vector3 boxCenter = transform.position + Vector3.up * 2.2f + transform.forward * 0.4f;
+        Vector3 boxHalfExtents = new Vector3(0.4f, 0.5f, 0.4f);
+
         bool lowCeiling = false;
-        int hitCount = Physics.RaycastNonAlloc(origin, Vector3.up, crouchHitsBuffer, crouchCheckHeight, crouchCheckMask, QueryTriggerInteraction.Ignore);
+        int hitCount = Physics.OverlapBoxNonAlloc(boxCenter, boxHalfExtents, crouchOverlapsBuffer, transform.rotation, crouchCheckMask, QueryTriggerInteraction.Ignore);
+
         for (int i = 0; i < hitCount; i++)
         {
-            var hitTransform = crouchHitsBuffer[i].transform;
-            if (hitTransform == transform || hitTransform.IsChildOf(transform)) continue;
+            Transform t = crouchOverlapsBuffer[i].transform;
+            if (t == transform || t.IsChildOf(transform)) continue;
+            // Jika mengenai player, jangan dianggap kusen pintu
+            if (player != null && (t == player || t.IsChildOf(player))) continue;
+
             lowCeiling = true;
             break;
         }
@@ -541,7 +499,9 @@ public class EnemyAI : MonoBehaviour
 
         crouchBlend = Mathf.MoveTowards(crouchBlend, isCrouching ? 1f : 0f, Time.deltaTime * crouchLerpSpeed);
         if (modelTransform != null)
+        {
             modelTransform.localPosition = modelBasePos - Vector3.up * (crouchLowerAmount * crouchBlend);
+        }
     }
 
     void UpdateAudio()
@@ -565,4 +525,20 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+        // Fungsi yang dipanggil oleh CrouchZone di pintu
+    public void SetCrouching(bool crouch)
+    {
+        if (crouch && !isCrouching)
+        {
+            isCrouching = true;
+            PlayAnimTrigger(crouchTrigger); // Memicu animasi "Nunduk"
+            Debug.Log("<color=yellow>[CANDLEMAN] Nunduk lewat pintu!</color>");
+        }
+        else if (!crouch && isCrouching)
+        {
+            isCrouching = false;
+            PlayAnimTrigger(CurrentMovementTrigger()); // Berdiri lagi (Walk / Run)
+            Debug.Log("<color=green>[CANDLEMAN] Berdiri tegak kembali!</color>");
+        }
+    }
 }
