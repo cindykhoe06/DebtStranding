@@ -1,18 +1,28 @@
 using UnityEngine;
 
-// A clue note the player can read with E - opens the shared NotePopup instead of carrying
-// its own UI. Used for the Main Gallery key clues.
+// A clue note the player can read with E - displays noteText directly from the Inspector.
 public class ReadableNote : MonoBehaviour, IInteractable
 {
-    [TextArea(3, 10)]
-    public string noteText = "Catatan kosong.";
+    [Header("Note Content")]
+    [TextArea(5, 12)]
+    public string noteText = 
+        @"October 12,
 
-    public string GetPromptMessage() => "[E] Baca Catatan";
+        ...I couldn't risk leaving the keys together.
+
+        The paintings are the perfect disguise. Everyone looks at the artwork, but no one ever considers what might be hiding on the other side.
+
+        I only hope I remember which ones...
+        ";
+
+    [Header("Interaction Prompt")]
+    public string promptMessage = "[E] Read Note";
+
+    public string GetPromptMessage() => promptMessage;
 
     public void Interact()
     {
-        var textAsset = Resources.Load<TextAsset>("Text/clue_key");
-        string text = textAsset != null ? textAsset.text.TrimEnd('\n', '\r') : noteText;
-        NotePopup.Instance?.Show(text);
+        // Langsung tampilkan teks dari Inspector ke UI popup
+        NotePopup.Instance?.Show(noteText);
     }
 }
