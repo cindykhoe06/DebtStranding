@@ -80,7 +80,11 @@ public class PlayerController : MonoBehaviour
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
 
-        moveDirection = (forward * inputY * speed) + (right * inputX * speed);
+        Vector3 inputVector = new Vector3(inputX, 0, inputY);
+        if (inputVector.sqrMagnitude > 1f) inputVector.Normalize();
+
+        moveDirection = (forward * inputVector.z * speed) + (right * inputVector.x * speed);
+        
 
         // 3. GRAVITASI
         if (controller.isGrounded)

@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class SlidingDrawer : MonoBehaviour, IInteractable
 {
+    [Header("Drawer Identification")]
+    [Tooltip("Nama identifikasi laci, misal: Top Drawer, Middle Drawer, Bottom Drawer, dll.")]
+    public string drawerName = "Drawer";
+
     [Header("Slide Settings")]
     public Vector3 slideOffset = new Vector3(0, -0.0035f, 0); // Distance it slides out (adjust X/Y/Z)
     public float slideSpeed = 3f;
@@ -25,7 +29,7 @@ public class SlidingDrawer : MonoBehaviour, IInteractable
 
     void Update()
     {
-        // Smooth slide animation
+        // Smooth slide animation (100% persis script asli)
         transform.localPosition = Vector3.Lerp(transform.localPosition, targetPos, Time.deltaTime * slideSpeed);
     }
 
@@ -44,6 +48,6 @@ public class SlidingDrawer : MonoBehaviour, IInteractable
 
     public string GetPromptMessage()
     {
-        return isOpen ? "[E] Close Drawer" : "[E] Open Drawer";
+        return isOpen ? $"[E] Close {drawerName}" : $"[E] Open {drawerName}";
     }
 }

@@ -10,7 +10,7 @@ public class CoinManager : MonoBehaviour
     public GameObject coinPrefabOrTemplate; // existing "Coin" GameObject (has CoinItem+collider+mesh)
 
     public int coinsPerBatch = 10;
-    public Vector2Int coinValueRange = new Vector2Int(5, 15);
+    public Vector2Int coinValueRange = new Vector2Int(1, 3);
 
     List<Transform> spawnPoints = new List<Transform>();
     List<GameObject> activeCoins = new List<GameObject>();
@@ -41,7 +41,7 @@ public class CoinManager : MonoBehaviour
         }
         activeCoins.Clear();
         SpawnBatch();
-        GameManager.Instance?.ShowNotification("Koin berpindah tempat!");
+        GameManager.Instance?.ShowNotification("Coins have respawned!");
     }
 
     void SpawnBatch()

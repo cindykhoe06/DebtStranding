@@ -12,26 +12,26 @@ public class InstructionsPopup : MonoBehaviour
     [Header("Default Instructions")]
     [TextArea(10, 25)]
     public string defaultRules = 
-@"1. GRATIS 3 MENIT PERTAMA
-Gunakan waktu untuk menjelajah & mengumpulkan koin.
+        @"1.<indent=8%><b>FREE FIRST 3 MINUTES</b>
+        Use this grace period to explore & collect coins.</indent>
 
-2. HUTANG & BUNGA 20%
-Tiap 3 menit, tagihan 20 Koin bertambah.
-Hutang belum lunas kena bunga 20% majemuk.
+        2.<indent=8%><b>DEBT & 20% INTEREST</b>
+        Every 3 minutes, a 20-Coin bill is added.
+        Unpaid debt incurs a 20% compound interest penalty.</indent>
 
-3. PETUGAS PENAGIH (USHER)
-• Koin Cukup: Hutang lunas (Streak +1).
-• Koin Kurang: Hilang 1 Nyawa & streak kembali 0/3!
+        3.<indent=8%><b>THE USHER (COLLECTOR)</b>
+        • Sufficient Coins: Debt cleared (+1 Streak).
+        • Insufficient Coins: Lose 1 Life & streak resets to 0/3!</indent>
 
-4. CARA MENANG (ESCAPE)
-Lunasi hutang 3 KALI BERTURUT-TURUT untuk membuka pintu keluar.
+        4.<indent=8%><b>HOW TO WIN (ESCAPE)</b>
+        Settle your debt 3 CONSECUTIVE TIMES to unlock the exit.</indent>
 
-KONTROL:
-WASD    : Bergerak
-Shift   : Lari
-E       : Interaksi
-Tab / I : Buka/Tutup Panduan
-ESC     : Pause Menu";
+        <b>CONTROLS:</b>
+        <indent=8%>WASD    : Move
+        Shift   : Sprint
+        E       : Interact
+        Tab / I : Toggle Guide
+        ESC     : Pause Menu</indent>";
 
     private bool openedBefore = false;
 

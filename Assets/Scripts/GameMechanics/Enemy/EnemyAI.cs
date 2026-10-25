@@ -13,7 +13,7 @@ public class EnemyAI : MonoBehaviour
     public float waypointWaitTime = 1.5f;
 
     [Header("Chase")]
-    public float chaseSpeed = 4.2f;
+    public float chaseSpeed = 5.8f;
     [Range(0f, 360f)] public float viewAngle = 100f;
     public float viewDistance = 15f;
     public float hearDistance = 8f;
@@ -58,10 +58,8 @@ public class EnemyAI : MonoBehaviour
 
     [Header("Audio")]
     public AudioSource footstepSource;
-    public AudioSource breathSource;
     public AudioSource stingerSource;
     public AudioClip chaseStinger;
-    public float breathMaxDistance = 15f;
 
     [Header("Animation")]
     public Animator animator;              // Candleman.controller: Trigger params Idle/Walk/Run/Nunduk/Attack
@@ -324,6 +322,12 @@ public class EnemyAI : MonoBehaviour
         bool wasPatrol = state == State.Patrol;
         state = State.Patrol;
         waitTimer = 0f;
+
+        if (stingerSource != null && stingerSource.isPlaying)
+        {
+            stingerSource.Stop();
+        }
+
         if (patrolPoints != null && patrolPoints.Length > 0)
             agent.SetDestination(patrolPoints[currentWaypoint].position);
         if (!wasPatrol) PlayAnimTrigger(walkTrigger);
@@ -333,7 +337,12 @@ public class EnemyAI : MonoBehaviour
     {
         if (state != State.Chase)
         {
-            if (stingerSource != null && chaseStinger != null) stingerSource.PlayOneShot(chaseStinger);
+            if (stingerSource != null && chaseStinger != null)
+            {
+                stingerSource.clip = chaseStinger;
+                stingerSource.loop = true;
+                if (!stingerSource.isPlaying) stingerSource.Play();
+            }
             PlayAnimTrigger(runTrigger);
         }
         state = State.Chase;
@@ -369,13 +378,14 @@ public class EnemyAI : MonoBehaviour
         agent.ResetPath();
         agent.isStopped = true;
 
+        if (stingerSource != null && stingerSource.isPlaying)
+        {
+            stingerSource.Stop();
+        }
+
         if (canPay)
         {
-            // === TAMBAHKAN BARIS INI ===
-            // Hentikan lari seketika dan ganti animasi ke Idle selama cooldown
             PlayAnimTrigger("Idle");
-
-            // Lunasi hutang
             gm.ResolvePaidCapture();
         }
         else
@@ -468,7 +478,6 @@ public class EnemyAI : MonoBehaviour
     static readonly Collider[] crouchOverlapsBuffer = new Collider[6];
     void UpdateCrouch()
     {
-        // Kotak deteksi tepat di atas kepala dan agak ke depan (arah langkah)
         Vector3 boxCenter = transform.position + Vector3.up * 2.2f + transform.forward * 0.4f;
         Vector3 boxHalfExtents = new Vector3(0.4f, 0.5f, 0.4f);
 
@@ -479,7 +488,6 @@ public class EnemyAI : MonoBehaviour
         {
             Transform t = crouchOverlapsBuffer[i].transform;
             if (t == transform || t.IsChildOf(transform)) continue;
-            // Jika mengenai player, jangan dianggap kusen pintu
             if (player != null && (t == player || t.IsChildOf(player))) continue;
 
             lowCeiling = true;
@@ -514,30 +522,21 @@ public class EnemyAI : MonoBehaviour
             if (!moving && footstepSource.isPlaying) footstepSource.Stop();
             footstepSource.pitch = (state == State.Chase || state == State.Search) ? 1.3f : 1f;
         }
-
-        if (breathSource != null && player != null)
-        {
-            float dist = HorizontalDistance(transform.position, player.position);
-            float t = Mathf.Clamp01(1f - (dist / breathMaxDistance));
-            breathSource.volume = t;
-            if (t > 0.02f && !breathSource.isPlaying) breathSource.Play();
-            if (t <= 0.02f && breathSource.isPlaying) breathSource.Stop();
-        }
     }
 
-        // Fungsi yang dipanggil oleh CrouchZone di pintu
+    // Fungsi yang dipanggil oleh CrouchZone di pintu
     public void SetCrouching(bool crouch)
     {
         if (crouch && !isCrouching)
         {
             isCrouching = true;
-            PlayAnimTrigger(crouchTrigger); // Memicu animasi "Nunduk"
+            PlayAnimTrigger(crouchTrigger);
             Debug.Log("<color=yellow>[CANDLEMAN] Nunduk lewat pintu!</color>");
         }
         else if (!crouch && isCrouching)
         {
             isCrouching = false;
-            PlayAnimTrigger(CurrentMovementTrigger()); // Berdiri lagi (Walk / Run)
+            PlayAnimTrigger(CurrentMovementTrigger());
             Debug.Log("<color=green>[CANDLEMAN] Berdiri tegak kembali!</color>");
         }
     }

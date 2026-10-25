@@ -188,7 +188,7 @@ public class GameManager : MonoBehaviour
 
         if (!DebugManager.Invincible) lives--;
         settledPayments = 0;
-        ShowNotification("GAGAL BAYAR - Settled Payment hangus");
+        ShowNotification("FAILED PAYMENT - Settled Payment Streak Lost");
         Debug.Log($"Cannot pay! Lost 1 life, settled payments reset. Lives left: {lives}");
 
         if (captureFlashImage != null) StartCoroutine(FlashCapture());
@@ -198,7 +198,7 @@ public class GameManager : MonoBehaviour
 
         if (!DebugManager.Invincible && lives <= 0)
         {
-            TriggerGameOver("Tidak mampu membayar tagihan.");
+            TriggerGameOver("Unable to pay the debt.");
         }
     }
 
@@ -230,7 +230,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        SetObjective("Jalan keluar terbuka!");
+        SetObjective("Exit is open!");
 
         // Jalankan urutan notifikasi: Notif 1 (hilang) -> Notif 2 (stay terus di layar)
         if (notificationRoutine != null) StopCoroutine(notificationRoutine);
@@ -241,7 +241,7 @@ public class GameManager : MonoBehaviour
     {
         if (notificationText == null) yield break;
 
-        notificationText.text = "Semua tagihan lunas! Jalan keluar terbuka.";
+        notificationText.text = "All debts paid! Exit is open.";
         notificationText.gameObject.SetActive(true);
 
         yield return new WaitForSecondsRealtime(notificationDuration);
@@ -249,7 +249,7 @@ public class GameManager : MonoBehaviour
         notificationText.gameObject.SetActive(false);
         yield return new WaitForSecondsRealtime(0.3f);
 
-        notificationText.text = "Jalan Keluar ada di Starting Room!";
+        notificationText.text = "Exit is in the Starting Room!";
         notificationText.gameObject.SetActive(true);
     }
 
@@ -303,7 +303,7 @@ public class GameManager : MonoBehaviour
     public void CollectExitKey()
     {
         hasKey = true;
-        ShowNotification("Kamu mendapatkan kunci ruangan!");
+        ShowNotification("You have obtained the room key!");
         UpdateUI();
     }
 
@@ -320,14 +320,13 @@ public class GameManager : MonoBehaviour
         if (coinsText) coinsText.text = $"Coins: {coins}";
         if (debtText) debtText.text = $"Debt: {debt}";
 
-        bool hasOfficeKey = KeyInventory.HasKey("OfficeKey");
-        bool hasRepairKey = KeyInventory.HasKey("RepairKey");
-        bool hasBothKeys = hasOfficeKey && hasRepairKey;
-
-        if (waveText && !hasBothKeys) waveText.text = "Periksa lukisan di Main Gallery";
-        else if (waveText && lockedDoorsRemaining > 0) waveText.text = "Buka ruangan terkunci di Main Hall";
-        else if (waveText && currentWave == 0) waveText.text = "Free Exploration";
-        else if (waveText && settledPayments < 3) waveText.text = $"Wave {currentWave}";
+        if (waveText)
+        {
+            if (currentWave == 0)
+                waveText.text = "Free Exploration";
+            else
+                waveText.text = $"Wave {currentWave}";
+        }
 
         if (livesText)
         {
@@ -337,7 +336,26 @@ public class GameManager : MonoBehaviour
         }
 
         if (paymentsText) paymentsText.text = $"Settled Payment: {settledPayments}/3";
-        if (keyText) keyText.text = $"Kunci Office: {(hasOfficeKey ? "Ada" : "Belum")}\nKunci Reparation: {(hasRepairKey ? "Ada" : "Belum")}";
+
+        if (keyText)
+        {
+            System.Collections.Generic.List<string> activeKeys = new System.Collections.Generic.List<string>();
+
+            if (KeyInventory.HasKey("OfficeKey"))
+                activeKeys.Add("Office Key");
+
+            if (KeyInventory.HasKey("RepairKey"))
+                activeKeys.Add("Repair Key");
+
+            if (activeKeys.Count == 0)
+            {
+                keyText.text = "Key: None";
+            }
+            else
+            {
+                keyText.text = "Key: " + string.Join(", ", activeKeys);
+            }
+        }
     }
 
     void TriggerGameOver(string reason)
