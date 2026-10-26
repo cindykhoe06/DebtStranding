@@ -397,6 +397,8 @@ public class EnemyAI : MonoBehaviour
     System.Collections.IEnumerator FailedCaptureSequence(GameManager gm)
     {
         gm?.SetInputLocked(true, showCursor: false);
+        gm?.PlayCaptureSound();           // Suara jumpscare langsung meledak
+        gm?.TriggerBloodyVision(attackAnimDuration); // <=== LAYAR LANGSUNG BERDARAH!
 
         FacePlayerInstant();
 
