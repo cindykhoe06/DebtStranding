@@ -32,6 +32,8 @@ public class GameManager : MonoBehaviour
     public AudioSource bellAudioSource;
     public AudioClip bellClip;
     public float bellLeadTime = 10f;
+    public int bellRings = 3;             // Jumlah bunyi lonceng
+    public float bellInterval = 1.2f;     // Jeda waktu antar bunyi (detik)
 
     [Header("UI - Bottom Left (Survival & Goal)")]
     public TextMeshProUGUI livesText;
@@ -84,9 +86,6 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // KeyInventory is a static HashSet, so it survives the Main Scene reload Retry does -
-        // without this, DoorController would see the old keys as already collected and stay
-        // unlocked after dying and retrying, even though every other piece of state is fresh.
         KeyInventory.ResetInventory();
         timeRemaining = waveDuration;
         UpdateUI();
@@ -94,13 +93,6 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        // === TOMBOL TEST PENGUJIAN INSTAN ===
-        // if (Input.GetKeyDown(KeyCode.K))
-        // {
-        //     Debug.Log("<color=cyan>[DEBUG] Tombol K ditekan: Membuka Escape Way secara paksa!</color>");
-        //     settledPayments = 3;
-        //     OpenEscapeWay();
-        // }
         if (isGameOver || hasWon) return;
         
         if (timeRemaining > 0)
@@ -110,7 +102,7 @@ public class GameManager : MonoBehaviour
             if (!bellPlayedThisWave && timeRemaining <= bellLeadTime)
             {
                 bellPlayedThisWave = true;
-                if (bellAudioSource != null && bellClip != null) bellAudioSource.PlayOneShot(bellClip);
+                StartCoroutine(PlayBellRingsRoutine());
             }
         }
         else
@@ -119,6 +111,18 @@ public class GameManager : MonoBehaviour
         }
 
         DisplayTime(timeRemaining);
+    }
+
+    System.Collections.IEnumerator PlayBellRingsRoutine()
+    {
+        for (int i = 0; i < bellRings; i++)
+        {
+            if (bellAudioSource != null && bellClip != null)
+            {
+                bellAudioSource.PlayOneShot(bellClip);
+            }
+            yield return new WaitForSeconds(bellInterval);
+        }
     }
 
     void DisplayTime(float time)
@@ -158,12 +162,6 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    // Candleman only ever calls one of these two - it decides which before touching the
-    // player (see EnemyAI.CatchPlayer), since the two outcomes behave too differently
-    // (no teleport/flash vs. a choreographed attack+teleport) to share one method anymore.
-    // debt == 0 is not handled here at all: EnemyAI.CatchPlayer no-ops entirely in that case.
-
-    // Case: coins >= debt. Auto-pay, settle a payment, no teleport, no attack animation.
     public void ResolvePaidCapture()
     {
         if (isGameOver || hasWon) return;
@@ -179,9 +177,12 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    // Case: coins < debt. Called by EnemyAI AFTER its "Bacok" attack animation finishes.
-    // Loses a life, wipes the current settled-payment streak, teleports the player back to
-    // spawn, and triggers LOSE if that was the last life.
+    public void PlayCaptureSound()
+    {
+        if (sfxAudioSource != null && captureSound != null)
+            sfxAudioSource.PlayOneShot(captureSound);
+    }
+
     public void ResolveFailedCapture(CharacterController playerController)
     {
         if (isGameOver || hasWon) return;
@@ -192,7 +193,8 @@ public class GameManager : MonoBehaviour
         Debug.Log($"Cannot pay! Lost 1 life, settled payments reset. Lives left: {lives}");
 
         if (captureFlashImage != null) StartCoroutine(FlashCapture());
-        if (sfxAudioSource != null && captureSound != null) sfxAudioSource.PlayOneShot(captureSound);
+        // (Baris sfxAudioSource captureSound sudah dipindahkan ke saat pertama kali tertangkap)
+        
         RespawnPlayerAtLobby(playerController);
         UpdateUI();
 
@@ -232,12 +234,11 @@ public class GameManager : MonoBehaviour
 
         SetObjective("Exit is open!");
 
-        // Jalankan urutan notifikasi: Notif 1 (hilang) -> Notif 2 (stay terus di layar)
         if (notificationRoutine != null) StopCoroutine(notificationRoutine);
         notificationRoutine = StartCoroutine(EscapeNotificationSequence());
     }
 
-        System.Collections.IEnumerator EscapeNotificationSequence()
+    System.Collections.IEnumerator EscapeNotificationSequence()
     {
         if (notificationText == null) yield break;
 
@@ -279,9 +280,6 @@ public class GameManager : MonoBehaviour
         notificationText.gameObject.SetActive(false);
     }
 
-    // showCursor=false is for in-gameplay freezes (e.g. Candleman's attack animation) where
-    // player movement must stop but the mouse cursor should stay hidden/locked, unlike the
-    // pause/instructions menus which want the cursor free to click buttons.
     public void SetInputLocked(bool locked, bool showCursor = true)
     {
         IsInputLocked = locked;
@@ -295,11 +293,6 @@ public class GameManager : MonoBehaviour
         Cursor.visible = locked;
     }
 
-    // Public entry point for picking up the exit/room key - called by RoomKey and by
-    // KeyPickup (the painting-hidden-key mechanic) so both paths share one code path and the
-    // HUD/objective never has to know which pickup actually granted it. KeyInventory still
-    // tracks per-door key IDs separately for DoorController's own access checks; this is just
-    // the single player-facing "do I have a key" flag and notification/HUD layer on top of it.
     public void CollectExitKey()
     {
         hasKey = true;
@@ -307,8 +300,6 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    // Called by DoorController once a locked Main Hall door is successfully unlocked with
-    // the key, so the HUD objective can clear once both rooms are open.
     public void NotifyDoorUnlocked()
     {
         lockedDoorsRemaining = Mathf.Max(0, lockedDoorsRemaining - 1);
@@ -398,6 +389,55 @@ public class GameManager : MonoBehaviour
         captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
     }
 
+    // Panggil efek darah langsung saat pertama kali tertangkap
+    public void TriggerBloodyVision(float duration = 2.5f)
+    {
+        if (captureFlashImage != null)
+        {
+            StopCoroutine(nameof(BloodyVisionRoutine));
+            StartCoroutine(BloodyVisionRoutine(duration));
+        }
+    }
+
+    System.Collections.IEnumerator BloodyVisionRoutine(float duration)
+    {
+        Color baseColor = captureFlashImage.color;
+        float elapsed = 0f;
+
+        // 1. Muncul cepat (0.2 detik) saat pertama kali kena bacok
+        while (elapsed < 0.2f)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float alpha = Mathf.Lerp(0f, 0.85f, elapsed / 0.2f);
+            captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
+            yield return null;
+        }
+
+        // 2. Berdenyut tegang selama sisa animasi serangan
+        float pulseTime = 0f;
+        while (pulseTime < (duration - 0.7f))
+        {
+            pulseTime += Time.unscaledDeltaTime;
+            // Denyut darah antara alpha 0.65 sampai 0.85
+            float pulseAlpha = 0.75f + Mathf.Sin(pulseTime * 8f) * 0.1f;
+            captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, pulseAlpha);
+            yield return null;
+        }
+
+        // 3. Memudar perlahan (fade out 0.5 detik) saat respawn kembali ke lobby
+        elapsed = 0f;
+        float currentAlpha = captureFlashImage.color.a;
+        while (elapsed < 0.5f)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float alpha = Mathf.Lerp(currentAlpha, 0f, elapsed / 0.5f);
+            captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
+            yield return null;
+        }
+
+        captureFlashImage.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0f);
+    }
+
     public void ResetState()
     {
         coins = 0;
@@ -414,6 +454,4 @@ public class GameManager : MonoBehaviour
         hasWon = false;
         UpdateUI();
     }
-
-    
 }
